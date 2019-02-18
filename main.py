@@ -1,7 +1,7 @@
 import super_words_builder as sw_builder
 import model_saver
 import dimension_reducer
-from analyse import find_best_kernel_widths
+from analyse import find_best_kernel_widths, do_analysis
 from predict import predict_with_all_kernel_widths, predict_all_models
 
 # prepare the data and the word2vec
@@ -65,5 +65,5 @@ for v, p in paths.items():
     # having the best kernel widths, predict with all models
     predict_all_models(path=p, w2v_version=v, models=models, s=1940, t=1951, e=2010)
 
-    # analyse the predictions
-    # TODO
+    # analyse the predictions and get the precision values
+    do_analysis(path=p, models=models)

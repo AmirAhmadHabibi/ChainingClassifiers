@@ -5,66 +5,35 @@ import matplotlib.pyplot as plt
 
 c = ['#E58606', '#99C945', '#52BCA3', '#5D69B1', '#CC61B0', '#DAA51B', '#24796C', '#2F8AC4', '#764E9F', '#ED645A']
 
-# load super words
-with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
-    s_words = pickle.load(super_file)
 
-# remove context from next years
-for y in range(1940, 2010):
-    for cat, words in s_words[y].items():
-        for appeared_word in words.keys():
-            # remove the word from the next years
-            for next_year in range(y + 1, 2010):
-                s_words[next_year][cat].pop(appeared_word, None)
-print('done removing!')
+def load_super_words():
+    # load super words
+    with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
+        s_words = pickle.load(super_file)
+
+    # remove context from next years
+    for y in range(1940, 2010):
+        for cat, words in s_words[y].items():
+            for appeared_word in words.keys():
+                # remove the word from the next years
+                for next_year in range(y + 1, 2010):
+                    s_words[next_year][cat].pop(appeared_word, None)
+    print('done removing!')
+    return s_words
 
 
-def do_analysis(path, name, kw_i, kw_u):
-    print(path)
-    all_methods = []
-    # all_methods = ['items-nn-exp_euc_sq_1.0', 'items-5nn-exp_euc_sq_1.0', 'items-avg-exp_euc_sq_1.0']
-    # all_methods += ['items-avg-exp_euc_sq_' + str(kw_i)]
-    # all_methods += ['items-nn-exp_euc_sq_' + str(kw_i[0])]
-    # all_methods += ['items-5nn-exp_euc_sq_' + str(kw_i[1])]
-    # all_methods += ['items-pt-avg-exp_euc_sq_1.0']
-    # all_methods += ['items-pt-avg-exp_euc_sq_' + str(kw_i[2])]
-    # all_methods += ['items-pt-wavg-exp_euc_sq_1.0']
-    # all_methods += ['items-pt-wavg-exp_euc_sq_' + str(kw_i[3])]
-    # all_methods += ['items-pt-wavg-exp_euc_sq_dynKW']
-    # all_methods += ['items-nn-exp_euc_sq_' + str(kw_i)]
-    # all_methods += ['items-5nn-exp_euc_sq_' + str(kw_i)]
-    # all_methods += ['items-pt-avg-exp_euc_sq_' + str(kw_i)]
-    # all_methods += ['items-pt0-avg-exp_euc_sq_1.0']
-    # all_methods += ['items-pt-mode-exp_euc_sq_1.0']
-    # all_methods += ['items-wavg-exp_euc_sq_1.0', 'items-eavg-exp_euc_sq_1.0']
-    # all_methods += ['uniform-nn-exp_euc_sq_1.0', 'uniform-5nn-exp_euc_sq_1.0', 'uniform-avg-exp_euc_sq_1.0']
-    # all_methods += ['uniform-avg-exp_euc_sq_' + str(kw_u)]
-    # all_methods += ['uniform-pt-avg-exp_euc_sq_1.0']
-    # all_methods += ['uniform-pt0-avg-exp_euc_sq_1.0']
-    # all_methods += ['uniform-pt-mode-exp_euc_sq_1.0']
-    # all_methods += ['uniform-wavg-exp_euc_sq_1.0', 'uniform-eavg-exp_euc_sq_1.0']
-    # all_methods += ['uniform-pt-wavg-exp_euc_sq_1.0']
-    # all_methods += ['items-one-_1.0', 'frequency-one-_1.0']
-    # all_methods += ['frequency-wavg-exp_euc_sq_dynKW']
-    # all_methods += ['frequency_sqr-wavg_sqr-exp_euc_sq_dynKW']
-    # all_methods += ['frequency_log-wavg_log-exp_euc_sq_dynKW']
-    all_methods += [
-        'items-pt-avg-exp_euc_sq_1.0',
-        'uniform-pt-avg-exp_euc_sq_1.0',
-
-        'uniform-wavg-exp_euc_sq_1.0',
-        'uniform-wavg-exp_euc_sq_dynKW',
-        'uniform-pt-wavg-exp_euc_sq_1.0',
-
-        'frequency-wavg-exp_euc_sq_1.0',
-        'frequency-wavg-exp_euc_sq_dynKW',
-        'frequency-pt-wavg-exp_euc_sq_1.0',
-        'items-one-_1.0',
-        'frequency-one-_1.0'
-    ]
+def do_analysis(path, models, t=1951):
+    s_words = load_super_words()
+    with open('./predictions/' + path + '/kernels.pkl', 'rb') as k_file:
+        best_kernel_widths = pickle.load(k_file)
 
     colors = [c[0], c[1], c[2], c[3], c[4]]
 
+    all_methods = []
+    for m in models:
+        if m[3] == 'adj':
+            m[3] = best_kernel_widths[m[0] + '-' + m[1] + '-' + m[2] + '_'][t - 1]
+        all_methods.append(m[0] + '-' + m[1] + '-' + m[2] + '_' + str(m[3]))
     prs = dict()
     for m in all_methods:
         with open('./predictions/' + path + '/' + m + '.pkl', 'rb') as p_file:
@@ -72,122 +41,13 @@ def do_analysis(path, name, kw_i, kw_u):
 
     plotter = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
                                       all_methods=all_methods, lang=path)
-    # plotter.find_100_most_recent()
     plotter.just_get_precision()
-    # plotter.precision_over_time_plot(name=name)
-    # plotter.bar_chart_it()
-    # plotter.box_plot_it()
-    # plotter.false_positive_it()
-    # plotter.bar_plot_category_precision(category_number=138 - 12, name=name)
-    # plotter.scatter_plot_category_precision_recall(name=name)
-
-
-def do_the_kws(path):
-    print(path)
-    colors = []
-
-    all_methods = []
-    # kws = []
-    # for i in range(1, 11):
-    #     kws.append(i / 10.0)
-    # for i in range(2, 100, 4):
-    #     kws.append(float(i))
-    kws = []
-    for i in range(1, 11):
-        kws.append(i / 10.0)
-    # for i in range(2, 10, 1):
-    #     kws.append(float(i))
-    for i in range(2, 51, 2):
-        kws.append(float(i))
-
-    for kw in kws:
-        all_methods.append('items-avg-exp_euc_sq_' + str(kw))
-        all_methods.append('uniform-avg-exp_euc_sq_' + str(kw))
-
-    clr = {'items': c[0], 'uniform': c[1]}
-
-    prs = dict()
-    for m in all_methods:
-        with open('./predictions/' + path + '/' + m + '.pkl', 'rb') as p_file:
-            pr = pickle.load(p_file)
-        prs[m] = pr
-
-    plotter = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
-                                      all_methods=all_methods, lang=path)
-    # plotter.just_get_precision()
-    plotter.plot_series(kws, colour=clr)
-
-    # yby
-    # Max for items: 14.0 0.3359050445103858
-    # Max for uniform: 0.6 0.3195845697329377
-
-    # yby 50s
-    # Max for items: 30.0 0.45160642570281123
-    # Max for uniform: 0.6 0.37248995983935745
-    # fixed:
-    # Max for items: 22.0 0.463855421686747
-    # Max for uniform: 0.6 0.37248995983935745
-
-    # yby 50s 2d
-    # Max for items: 1.1
-    # Max for uniform: 0.01
-
-    # yby 50s 2d
-    # Max for items: 34.0
-    # Max for uniform: 0.1
-
-    # yby 50s lda
-    # Max for items: 6.0 0.44457831325301206
-    # Max for uniform: 0.5 0.3240963855421687
-
-    # yby 50s slda
-    # Max for items: 8.0 0.49417670682730924
-    # Max for uniform: 0.3 0.40883534136546185
-
-    # yby 50s pca
-    # Max for items: 26.0 0.4714859437751004
-    # Max for uniform: 0.4 0.37730923694779117
-
-    # yby 50s s0.5lda
-    # Max for items: 5.0 0.521285140562249
-    # Max for uniform: 0.2 0.41967871485943775
-
-    # yby 40s
-    # Max for items: 52.0 0.4744437763078773
-    # Max for uniform: 0.8 0.31930246542393265
-
-    # yby 40s s0.5lda
-    # Max for items: 4.0 0.5147324113048707
-    # Max for uniform: 0.2 0.42994588093806374
-
-    # yby 40s s0.5lda fixed
-    # Max for items: 4.0 0.5147324113048707
-    # Max for uniform: 0.2 0.42994588093806374
-
-    # yby 40s pca
-    # Max for items: 48.0 0.4846662657847264
-    # Max for uniform: 0.5 0.3367408298256164
 
 
 def plot_time_series():
-    fig, ax = plt.subplots(2, 2, figsize=(12, 6))
-    # method_i = [{'lang': 'chi-w2v-yby-51', 'kw_i': 52.0, 'kw_u': 0.8, 'name': 'Vanilla word2vec models'},
-    #             {'lang': 'chi-w2v-yby-pca-51', 'kw_i': 48.0, 'kw_u': 0.5,
-    #              'name': 'Dimension-reduced models (time-varying)'},
-    #             {'lang': 'chi-w2v-yby-s0.5lda-fixed-51', 'kw_i': 4.0, 'kw_u': 0.2,
-    #              'name': 'Category-biased models (static)'},
-    #             {'lang': 'chi-w2v-yby-s0.5lda-51', 'kw_i': 4.0, 'kw_u': 0.2,
-    #              'name': 'Category-biased models (time-varying)'}]
+    s_words = load_super_words()
 
-    # method_i = [
-    #     {'lang': 'chi-w2v-yby-all', 'kw_i': 52.0, 'kw_u': 0.8,
-    #      'name': 'Vanilla word2vec models', 'pr': vanilla},
-    #     {'lang': 'chi-w2v-yby-pca-all', 'kw_i': 48.0, 'kw_u': 0.5,
-    #      'name': 'Dimension-reduced models (dynamic)', 'pr': pca},
-    #     {'lang': 'chi-w2v-yby-s0.5lda-fixed-all', 'kw_i': 4.0, 'kw_u': 0.2,
-    #      'name': 'Category-weighted models (static)', 'pr': lda_s},
-    #     {'lang': 'chi-w2v-yby-s0.5lda-all', 'kw_i': 4.0, 'kw_u': 0.2,
-    #      'name': 'Category-weighted models (dynamic)', 'pr': lda_t}]
+    fig, ax = plt.subplots(2, 2, figsize=(12, 6))
     method_i = [
         {'lang': 'chi-w2v-yby-all', 'kw_i': 52.0, 'kw_u': 0.8,
          'name': 'Full'},
@@ -207,19 +67,12 @@ def plot_time_series():
         all_methods += ['items-avg-exp_euc_sq_' + str(method_i[i]['kw_i'])]
         all_methods += ['items-pt-avg-exp_euc_sq_1.0']
 
-        # if method_i[i]['lang'] == 'chi-w2v-yby-s0.5lda-all':
-        #     names += ['Prototype Kernel_s (s)', 'Prototype Kernel_t (s)']
-        #     all_methods += ['items-pt-avg-exp_euc_sq_' + str(7.0)]
-        #     all_methods += ['items-pt-avg-exp_euc_sq_dynKW']
-
-        colors = c
-
         prs = dict()
         for m in all_methods:
             with open('./predictions/' + method_i[i]['lang'] + '/' + m + '.pkl', 'rb') as p_file:
                 prs[m] = pickle.load(p_file)
 
-        plotter = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
+        plotter = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=c, baselines=None,
                                           all_methods=all_methods, lang=method_i[i]['lang'])
         # plotter.precision_over_time(name=method_i[i]['name'])
 
@@ -246,6 +99,8 @@ def plot_time_series():
 
 
 def find_best_kernel_widths(path, kws, models):
+    s_words = load_super_words()
+
     # find the best kernel width until each year
     method_names = [m[0] + '-' + m[1] + '-' + m[2] + '_' for m in models]
 
@@ -284,29 +139,3 @@ def compare_predictions():
         prs[1] = pickle.load(p_file)
 
     SuperPredictionAnalyser.overlap(prs[0], prs[1])
-
-# do_analysis(path='chi-w2v-yby-51', kw_i=52.0, kw_u=0.8, name='Vanilla')
-# do_analysis(path='chi-w2v-yby-pca-51', kw_i=48.0, kw_u=0.5, name='Dimension-reduced')
-# do_analysis(path='chi-w2v-yby-s0.5lda-51', kw_i=4.0, kw_u=0.2, name='Category-biased')
-# do_analysis(path='chi-w2v-yby-s0.5lda-fixed-51', kw_i=4.0, kw_u=0.2, name='Category-biased(Fixed)')
-#
-# do_analysis(path='chi-w2v-yby', kw_i=22.0, kw_u=0.6)
-# do_analysis(path='chi-w2v-yby-s0.5lda', kw_i=5.0, kw_u=0.2)
-# do_analysis(path='chi-w2v-yby-pca', kw_i=26.0, kw_u=0.4)
-#
-# do_the_kws(path='chi-w2v-yby-40s')
-# do_the_kws(path='chi-w2v-yby-s0.5lda-40s')
-# do_the_kws(path='chi-w2v-yby-s0.5lda-fixed-40s')
-# do_the_kws(path='chi-w2v-yby-pca-40s')
-#
-# plot_time_series()
-#
-
-# analise dynamic kernels
-# do_analysis(path='chi-w2v-yby-all', kw_i='dynKW', kw_u=0.9, name='Vanilla')
-# do_analysis(path='chi-w2v-yby-pca-all', kw_i='dynKW', kw_u=0.5, name='Dimension-reduced')
-# do_analysis(path='chi-w2v-yby-s0.5lda-fixed-all', kw_i='dynKW', kw_u=0.2, name='Category-biased(Fixed)')
-# do_analysis(path='chi-w2v-yby-s0.5lda-all', kw_i='dynKW', kw_u=0.2, name='Category-biased')
-# do_analysis(path='chi-w2v-yby-s0.5lda-all', kw_i=[0.9, 2.0, 7.0, 2.0], kw_u='', name='Category-biased')
-
-# compare_predictions()
