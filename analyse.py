@@ -1,7 +1,7 @@
 import pickle
 from the_analyser import SuperPredictionAnalyser
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 c = ['#E58606', '#99C945', '#52BCA3', '#5D69B1', '#CC61B0', '#DAA51B', '#24796C', '#2F8AC4', '#764E9F', '#ED645A']
 
@@ -245,36 +245,27 @@ def plot_time_series():
     plt.clf()
 
 
-def find_dynamic_kernel_width(lang):
-    print(lang)
-    method_names = [
-        'items-avg-exp_euc_sq_',
-        'uniform-avg-exp_euc_sq_',
-        'items-nn-exp_euc_sq_',
-        'items-5nn-exp_euc_sq_',
-        'items-pt-avg-exp_euc_sq_',
-        'items-pt-avg-exp_euc_sq_',
-        'uniform-pt-avg-exp_euc_sq_',
-        'uniform-wavg-exp_euc_sq_',
-        'frequency-pt-wavg-exp_euc_sq_',
-        'frequency-wavg-exp_euc_sq_',
-        'frequency_sqr-wavg_sqr-exp_euc_sq_',
-        'frequency_log-wavg_log-exp_euc_sq_'
-    ]
+def find_best_kernel_widths(path, kws):
+    # find the best kernel width until each year
+    models = [['uniform', 'avg', 'exp_euc_sq'],
+              ['items', 'avg', 'exp_euc_sq'],
+              ['uniform', 'wavg', 'exp_euc_sq'],
+              ['frequency', 'wavg', 'exp_euc_sq']]
+    method_names = [m[0] + '-' + m[1] + '-' + m[2] + '_' for m in models]
+
     all_methods = []
-    kws = [i / 10.0 for i in range(1, 11)] + [float(i) for i in range(2, 101)]
     for kw in kws:
         for name in method_names:
             all_methods.append(name + str(kw))
 
     prs = dict()
     for m in all_methods:
-        with open('./predictions/' + lang + '/' + m + '.pkl', 'rb') as p_file:
+        with open('./predictions/' + path + '/' + m + '.pkl', 'rb') as p_file:
             pr = pickle.load(p_file)
         prs[m] = pr
 
     plotter = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=[], baselines=None,
-                                      all_methods=all_methods, lang=lang)
+                                      all_methods=all_methods, lang=path)
     kernels = dict()
     for name in method_names:
         print('--', name)
@@ -282,7 +273,7 @@ def find_dynamic_kernel_width(lang):
         for year in range(1949, 2009):
             kernels[name][year + 1] = plotter.best_kernel_width(kws=kws, end_year=year, method=name)
 
-    with open('./predictions/' + lang + '/kernels.pkl', 'wb') as k_file:
+    with open('./predictions/' + path + '/kernels.pkl', 'wb') as k_file:
         pickle.dump(kernels, k_file)
 
 
@@ -297,7 +288,6 @@ def compare_predictions():
         prs[1] = pickle.load(p_file)
 
     SuperPredictionAnalyser.overlap(prs[0], prs[1])
-
 
 # do_analysis(path='chi-w2v-yby-51', kw_i=52.0, kw_u=0.8, name='Vanilla')
 # do_analysis(path='chi-w2v-yby-pca-51', kw_i=48.0, kw_u=0.5, name='Dimension-reduced')
@@ -315,10 +305,6 @@ def compare_predictions():
 #
 # plot_time_series()
 #
-# find_dynamic_kernel_width(lang='chi-w2v-yby-all')
-# find_dynamic_kernel_width(lang='chi-w2v-yby-pca-all')
-# find_dynamic_kernel_width(lang='chi-w2v-yby-s0.5lda-fixed-all')
-# find_dynamic_kernel_width(lang='chi-w2v-yby-s0.5lda-all')
 
 # analise dynamic kernels
 # do_analysis(path='chi-w2v-yby-all', kw_i='dynKW', kw_u=0.9, name='Vanilla')
@@ -336,4 +322,3 @@ def compare_predictions():
 # SuperPredictionAnalyser.barplot3d(precisions, x_names, y_names, baseline=29.9)
 
 # compare_predictions()
-

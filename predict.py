@@ -2,30 +2,34 @@ import copy
 from the_predictor import SuperPredictor
 import pickle
 
-# load super words
-with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
-    s_words = pickle.load(super_file)
 
-# save a copy with the frequencies in all years
-sw_complete = copy.deepcopy(s_words)
+def load_super_words():
+    # load super words
+    with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
+        s_words = pickle.load(super_file)
 
-# remove context from next years so to have only the first year of appearance of each context word
-for y in range(1940, 2010):
-    for c, words in s_words[y].items():
-        for appeared_word in words.keys():
-            # remove the word from the next years
-            for next_year in range(y + 1, 2010):
-                s_words[next_year][c].pop(appeared_word, None)
-print('done removing!')
+    # save a copy with the frequencies in all years
+    sw_complete = copy.deepcopy(s_words)
 
-# remove categories that are empty after 1940
-for empty_cat in ['枝', '桌', '课', '进', '丝', '记', '盏', '夥', '轴', '尾', '针']:
+    # remove context from next years so to have only the first year of appearance of each context word
     for y in range(1940, 2010):
-        s_words[y].pop(empty_cat, None)
+        for c, words in s_words[y].items():
+            for appeared_word in words.keys():
+                # remove the word from the next years
+                for next_year in range(y + 1, 2010):
+                    s_words[next_year][c].pop(appeared_word, None)
+    print('done removing!')
+
+    # remove categories that are empty after 1940
+    for empty_cat in ['枝', '桌', '课', '进', '丝', '记', '盏', '夥', '轴', '尾', '针']:
+        for y in range(1940, 2010):
+            s_words[y].pop(empty_cat, None)
+    return s_words, sw_complete
 
 
-def make_predictor(path, w2v_version, s, t, e):
+def make_predictor_object(path, w2v_version, s, t, e):
     """find the word vector to load and then make a predictor object with it"""
+    s_words, sw_complete = load_super_words()
 
     if 'LDA' in w2v_version or 'PCA' in w2v_version:
         if w2v_version == 'LDA':
@@ -61,157 +65,49 @@ def make_predictor(path, w2v_version, s, t, e):
     return predictor
 
 
-def predict_all_models(path, w2v_version, kw_i=0.0, kw_u=0.0, s=1940, t=1951, e=2010):
-    print('--' + path)
-    predictor = make_predictor(path, w2v_version, s, t, e)
+def predict_all_models(path, w2v_version, s=1940, t=1951, e=2010):
+    predictor = make_predictor_object(path, w2v_version, s, t, e)
 
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='frequency', cat_sim_method='wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='wavg', vec_sim_method='exp_euc_sq', kw=kw_i[2])
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt-avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt-wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='frequency', cat_sim_method='pt-wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='frequency', cat_sim_method='wavg', vec_sim_method='exp_euc_sq', kw=kw_i[2])
-    # predictor.predict_them_all(prior_dist='frequency_sqr', cat_sim_method='wavg_sqr', vec_sim_method='exp_euc_sq', kw=kw_i[0])
-    # predictor.predict_them_all(prior_dist='frequency_log', cat_sim_method='wavg_log', vec_sim_method='exp_euc_sq', kw=kw_i[0])
+    with open('./predictions/' + path + '/kernels.pkl', 'rb') as k_file:
+        best_kernel_widths = pickle.load(k_file)
 
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='nn', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='nn', vec_sim_method='exp_euc_sq', kw=kw_i[0])
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='5nn', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='5nn', vec_sim_method='exp_euc_sq', kw=kw_i[1])
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='avg', vec_sim_method='exp_euc_sq', kw=kw_i)
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt0-avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-wavg', vec_sim_method='exp_euc_sq', kw=kw_i[3])
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-avg', vec_sim_method='exp_euc_sq', kw=kw_i[0])
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt0-mode', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-mode', vec_sim_method='exp_euc_sq')
+    models = [['uniform', 'nn', 'exp_euc_sq', '1.0'],
+              ['uniform', '5nn', 'exp_euc_sq', '1.0'],
+              ['uniform', 'avg', 'exp_euc_sq', '1.0'],
+              ['uniform', 'avg', 'exp_euc_sq', best_kernel_widths['uniform-avg-exp_euc_sq_'][t - 1]],
+              ['uniform', 'pt-avg', 'exp_euc_sq', '1.0'],
 
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='gkde', vec_sim_method='')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='eavg', vec_sim_method='exp_euc_sq')
+              ['items', 'nn', 'exp_euc_sq', '1.0'],
+              ['items', '5nn', 'exp_euc_sq', '1.0'],
+              ['items', 'avg', 'exp_euc_sq', '1.0'],
+              ['items', 'avg', 'exp_euc_sq', best_kernel_widths['items-avg-exp_euc_sq_'][t - 1]],
+              ['items', 'pt-avg', 'exp_euc_sq', '1.0'],
 
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='nn', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='5nn', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='avg', vec_sim_method='exp_euc_sq', kw=kw_u)
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt0-avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt-avg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt0-mode', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt-mode', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='pt-wavg', vec_sim_method='exp_euc_sq')
+              ['uniform', 'wavg', 'exp_euc_sq', '1.0'],
+              ['uniform', 'wavg', 'exp_euc_sq', best_kernel_widths['uniform-wavg-exp_euc_sq_'][t - 1]],
+              ['uniform', 'pt-wavg', 'exp_euc_sq', '1.0'],
 
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='gkde', vec_sim_method='')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='wavg', vec_sim_method='exp_euc_sq')
-    # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='eavg', vec_sim_method='exp_euc_sq')
+              ['frequency', 'wavg', 'exp_euc_sq', '1.0'],
+              ['frequency', 'wavg', 'exp_euc_sq', best_kernel_widths['frequency-wavg-exp_euc_sq_'][t - 1]],
+              ['frequency', 'pt-wavg', 'exp_euc_sq', '1.0'],
 
-    # predictor.predict_them_all(prior_dist='items', cat_sim_method='one', vec_sim_method='')
-    predictor.predict_them_all(prior_dist='frequency', cat_sim_method='one', vec_sim_method='')
+              ['items', 'one', '', '1.0'],
+              ['uniform', 'one', '', '1.0'],
+              ['frequency', 'one', '', '1.0']
+              ]
+    for m in models:
+        predictor.predict_them_all(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2], kw=m[3])
 
 
-def predict_kernel_widths(path, w2v_version, s=1940, t=1941, e=1950):
-    print('--' + path)
+def predict_with_all_kernel_widths(path, w2v_version, kws, s=1940, t=1941, e=1950):
+    predictor = make_predictor_object(path, w2v_version, s, t, e)
 
-    predictor = make_predictor(path, w2v_version, s, t, e)
-    kws = [i / 10.0 for i in range(1, 11)] + [float(i) for i in range(2, 101)]
+    models = [['uniform', 'avg', 'exp_euc_sq'],
+              ['items', 'avg', 'exp_euc_sq'],
+              ['uniform', 'wavg', 'exp_euc_sq'],
+              ['frequency', 'wavg', 'exp_euc_sq']]
 
     for kw in kws:
-        predictor.predict_them_all(prior_dist='items', cat_sim_method='nn', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='items', cat_sim_method='5nn', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-avg', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='items', cat_sim_method='pt-wavg', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='items', cat_sim_method='avg', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='avg', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='frequency', cat_sim_method='wavg', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='uniform', cat_sim_method='wavg', vec_sim_method='exp_euc_sq', kw=kw)
-        # predictor.predict_them_all(prior_dist='frequency_sqr', cat_sim_method='wavg_sqr', vec_sim_method='exp_euc_sq',
-        #                            kw=kw)
-        # predictor.predict_them_all(prior_dist='frequency_log', cat_sim_method='wavg_log', vec_sim_method='exp_euc_sq',
-        #                            kw=kw)
-
-
-def find_neighbours(path, w2v_version, s=1940, t=1951, e=2010):
-    predictor = make_predictor(path, w2v_version, s, t, e)
-    # predictor.find_neighbouring_words(word='博客', category='个', year=2003)
-    # predictor.find_neighbouring_words(word='网民', category='名', year=2001)
-    # predictor.find_neighbouring_words(word='鼠标', category='个', year=1996)
-    # predictor.find_neighbouring_words(word='便利店', category='家', year=1992)
-
-    # predictor.find_neighbouring_words(word='浏览器', category='个', year=1997)
-    # predictor.find_neighbouring_words(word='防火墙', category='个', year=2003)
-    # predictor.find_neighbouring_words(word='终端', category='个', year=2003)
-
-    # predictor.find_neighbouring_words(word='互联网', category='代', year=1995)
-
-    # predictor.find_neighbouring_words(word='玩家', category='名', year=1997)
-    # predictor.find_neighbouring_words(word='技师', category='名', year=1997)
-    # predictor.find_neighbouring_words(word='同伴', category='名', year=1997)
-
-    # predictor.find_neighbouring_words(word='路由器', category='个', year=1995)
-
-    predictor.find_neighbouring_words(word='相机', category='款', year=1993)
-    # 相机    款 1993
-    # 电脑 1.6881220515509874e-22 	 [('部', 1958), ('台', 1978), ('代', 1981), ('款', 1988)]
-    # 光盘 1.2122898876345795e-23 	 [('张', 1949), ('套', 1988)]
-    predictor.find_neighbouring_words(word='电脑', category='款', year=1988)
-    predictor.find_neighbouring_words(word='光盘', category='套', year=1988)
-    # predictor.find_neighbouring_words(word='软件', category='款', year=1993)
-    # predictor.find_neighbouring_words(word='服务器', category='组', year=1992)
-    # predictor.find_neighbouring_words(word='防火墙', category='道', year=1992)
-    # predictor.find_neighbouring_words(word='视频', category='段', year=1997)
-
-
-# predict for all 4 word vector versions:
-predict_all_models(path='chi-w2v-yby-all', w2v_version='orig', kw_i=52.0, kw_u=0.8, s=1940, t=1951, e=2010)
-predict_all_models(path='chi-w2v-yby-pca-all', w2v_version='PCA', kw_i=48.0, kw_u=0.5, s=1940, t=1951, e=2010)
-predict_all_models(path='chi-w2v-yby-s0.5lda-fixed-all', w2v_version='s0.5LDA-F', kw_i=4.0, kw_u=0.2, s=1940, t=1951, e=2010)
-predict_all_models(path='chi-w2v-yby-s0.5lda-all', w2v_version='s0.5LDA', kw_i=4.0, kw_u=0.2, s=1940, t=1951, e=2010)
-
-# predict for different kernel widths in the 40s for all 4 word vector versions
-# predict_kernel_widths(path='chi-w2v-yby-40s', w2v_version='orig', s=1940, t=1941, e=1950)
-# predict_kernel_widths(path='chi-w2v-yby-pca-40s', w2v_version='PCA', s=1940, t=1941, e=1950)
-# predict_kernel_widths(path='chi-w2v-yby-s0.5lda-fixed-40s', w2v_version='s0.5LDA-F', s=1940, t=1941, e=1950)
-# predict_kernel_widths(path='chi-w2v-yby-s0.5lda-40s', w2v_version='s0.5LDA', s=1940, t=1941, e=1950)
-
-# predict for different kernel widths in all years for all 4 word vector versions
-# predict_kernel_widths(path='chi-w2v-yby-all', w2v_version='orig', s=1940, t=1941, e=2010)
-# predict_kernel_widths(path='chi-w2v-yby-pca-all', w2v_version='PCA', s=1940, t=1941, e=2010)
-# predict_kernel_widths(path='chi-w2v-yby-s0.5lda-fixed-all', w2v_version='s0.5LDA-F', s=1940, t=1941, e=2010)
-# predict_kernel_widths(path='chi-w2v-yby-s0.5lda-all', w2v_version='s0.5LDA', s=1940, t=1941, e=2010)
-
-# # predict for all 4 word vector versions with dynamic kernel width:
-# models = {'orig': 'chi-w2v-yby-all',
-#           'PCA': 'chi-w2v-yby-pca-all',
-#           's0.5LDA': 'chi-w2v-yby-s0.5lda-all',
-#           's0.5LDA-F': 'chi-w2v-yby-s0.5lda-fixed-all'}
-#
-# # models = {'s0.5LDA': 'chi-w2v-yby-s0.5lda-all'}
-#
-# for wv, path in models.items():
-#     with open('./predictions/' + path + '/kernels.pkl', 'rb') as k_file:
-#         k1 = pickle.load(k_file)
-#     # method_names = ['items-nn-exp_euc_sq_', 'items-5nn-exp_euc_sq_', 'items-pt-avg-exp_euc_sq_',
-#     #                 'items-pt-wavg-exp_euc_sq_','frequency-wavg-exp_euc_sq_']
-#
-#     # method_names = ['frequency-wavg-exp_euc_sq_']
-#     # method_names = ['frequency_sqr-wavg_sqr-exp_euc_sq_']
-#     # method_names = ['frequency_log-wavg_log-exp_euc_sq_']
-#     method_names = [
-#         # 'items-pt-avg-exp_euc_sq_',
-#         'uniform-pt-avg-exp_euc_sq_',
-#         'frequency-pt-wavg-exp_euc_sq_',
-#         'uniform-wavg-exp_euc_sq_',
-#         # 'frequency-wavg-exp_euc_sq_',
-#     ]
-#
-#     # 0.9 2.0 7.0
-#     ki = [k1[mn] for mn in method_names]
-#     # ki = [k1[mn][1951] for mn in method_names]
-#     # print(ki)
-#     # ki = k1['items']
-#     # ku = k1['uniform']
-#     print(path)
-#     print(ki[2][1950])
-#     predict_all_models(path=path, w2v_version=wv, kw_i=ki)
+        # do each kernel width for all different prior distribution and category similarity method
+        for m in models:
+            predictor.predict_them_all(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2], kw=kw)
