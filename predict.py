@@ -32,82 +32,34 @@ def make_predictor_object(path, w2v_version, s, t, e):
     s_words, sw_complete = load_super_words()
 
     if 'LDA' in w2v_version or 'PCA' in w2v_version:
-        if w2v_version == 'LDA':
-            with open('./data/w2v-chi-yby-LDA.pkl', 'rb') as infile:
-                w2v_yby = pickle.load(infile)
-        elif w2v_version == 's0.5LDA':
-            with open('./data/w2v-chi-yby-s0.5LDA.pkl', 'rb') as infile:
-                w2v_yby = pickle.load(infile)
-        elif w2v_version == 's0.5LDA-F':
-            with open('./data/w2v-chi-yby-s0.5LDA-fixed.pkl', 'rb') as infile:
-                w2v_yby = pickle.load(infile)
-        elif w2v_version == 'PCA':
-            with open('./data/w2v-chi-yby-PCA.pkl', 'rb') as infile:
-                w2v_yby = pickle.load(infile)
-        else:
-            raise Exception("Word2vec version not found!")
+        with open('./data/w2v-chi-yby-' + w2v_version + '.pkl', 'rb') as infile:
+            w2v_yby = pickle.load(infile)
         predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, path=path,
                                    word_vectors=None, word_vector_yby=w2v_yby, swc=sw_complete)
     else:
-        if w2v_version == '2D':
-            with open('./data/w2v-chi-yby(2D).pkl', 'rb') as w2v_file:
-                w2v = pickle.load(w2v_file)
-        elif w2v_version == '5D':
-            with open('./data/w2v-chi-yby(5D).pkl', 'rb') as w2v_file:
-                w2v = pickle.load(w2v_file)
-        elif w2v_version == 'orig':
-            with open('./data/w2v-chi-yby.pkl', 'rb') as w2v_file:
-                w2v = pickle.load(w2v_file)
-        else:
-            raise Exception("Word2vec version not found!")
+        with open('./data/w2v-chi-yby.pkl', 'rb') as w2v_file:
+            w2v = pickle.load(w2v_file)
         predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, path=path,
                                    word_vectors=w2v, word_vector_yby=None, swc=sw_complete)
     return predictor
 
 
-def predict_all_models(path, w2v_version, s=1940, t=1951, e=2010):
+def predict_with_all_kernel_widths(path, w2v_version, kws, models, s=1940, t=1941, e=1950):
     predictor = make_predictor_object(path, w2v_version, s, t, e)
-
-    with open('./predictions/' + path + '/kernels.pkl', 'rb') as k_file:
-        best_kernel_widths = pickle.load(k_file)
-
-    models = [['uniform', 'nn', 'exp_euc_sq', '1.0'],
-              ['uniform', '5nn', 'exp_euc_sq', '1.0'],
-              ['uniform', 'avg', 'exp_euc_sq', '1.0'],
-              ['uniform', 'avg', 'exp_euc_sq', best_kernel_widths['uniform-avg-exp_euc_sq_'][t - 1]],
-              ['uniform', 'pt-avg', 'exp_euc_sq', '1.0'],
-
-              ['items', 'nn', 'exp_euc_sq', '1.0'],
-              ['items', '5nn', 'exp_euc_sq', '1.0'],
-              ['items', 'avg', 'exp_euc_sq', '1.0'],
-              ['items', 'avg', 'exp_euc_sq', best_kernel_widths['items-avg-exp_euc_sq_'][t - 1]],
-              ['items', 'pt-avg', 'exp_euc_sq', '1.0'],
-
-              ['uniform', 'wavg', 'exp_euc_sq', '1.0'],
-              ['uniform', 'wavg', 'exp_euc_sq', best_kernel_widths['uniform-wavg-exp_euc_sq_'][t - 1]],
-              ['uniform', 'pt-wavg', 'exp_euc_sq', '1.0'],
-
-              ['frequency', 'wavg', 'exp_euc_sq', '1.0'],
-              ['frequency', 'wavg', 'exp_euc_sq', best_kernel_widths['frequency-wavg-exp_euc_sq_'][t - 1]],
-              ['frequency', 'pt-wavg', 'exp_euc_sq', '1.0'],
-
-              ['items', 'one', '', '1.0'],
-              ['uniform', 'one', '', '1.0'],
-              ['frequency', 'one', '', '1.0']
-              ]
-    for m in models:
-        predictor.predict_them_all(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2], kw=m[3])
-
-
-def predict_with_all_kernel_widths(path, w2v_version, kws, s=1940, t=1941, e=1950):
-    predictor = make_predictor_object(path, w2v_version, s, t, e)
-
-    models = [['uniform', 'avg', 'exp_euc_sq'],
-              ['items', 'avg', 'exp_euc_sq'],
-              ['uniform', 'wavg', 'exp_euc_sq'],
-              ['frequency', 'wavg', 'exp_euc_sq']]
 
     for kw in kws:
         # do each kernel width for all different prior distribution and category similarity method
         for m in models:
             predictor.predict_them_all(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2], kw=kw)
+
+
+def predict_all_models(path, w2v_version, models, s=1940, t=1951, e=2010):
+    predictor = make_predictor_object(path, w2v_version, s, t, e)
+
+    with open('./predictions/' + path + '/kernels.pkl', 'rb') as k_file:
+        best_kernel_widths = pickle.load(k_file)
+
+    for m in models:
+        if m[3] == 'adj':
+            m[3] = best_kernel_widths[m[0] + '-' + m[1] + '-' + m[2] + '_'][t - 1]
+        predictor.predict_them_all(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2], kw=m[3])

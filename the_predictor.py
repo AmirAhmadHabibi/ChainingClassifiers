@@ -241,19 +241,9 @@ class SuperPredictor:
             ol = sum(len(ws) for ws in self.super_words_so_far.values())
             print(year, '\t', '%' + str(int(100 * ne / (ol + ne))), ne, '\t', '%' + str(int(100 * ol / (ol + ne))), ol)
             for cat in self.categories:
-                # vectors = None
-                # for w in self.super_words_so_far[cat]:
-                #     if vectors is None:
-                #         vectors = [[] for _ in self.word_vectors[w]]
-                #     for i, value in enumerate(self.word_vectors[w]):
-                #         vectors[i].append(value)
 
                 vectors = [self.word_vectors[w] for w in self.super_words_so_far[cat]]
-                # if vectors is not None and len(vectors[0]) > 1:
                 if len(vectors) > 1:
-                    # vectors = np.vstack(vectors).transpose()
-                    # bw = gaussian_kde(vectors).factor
-                    # print('::',bw)
                     self.kde_functions[cat] = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(vectors)
                 else:
                     self.kde_functions[cat] = None

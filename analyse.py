@@ -245,12 +245,8 @@ def plot_time_series():
     plt.clf()
 
 
-def find_best_kernel_widths(path, kws):
+def find_best_kernel_widths(path, kws, models):
     # find the best kernel width until each year
-    models = [['uniform', 'avg', 'exp_euc_sq'],
-              ['items', 'avg', 'exp_euc_sq'],
-              ['uniform', 'wavg', 'exp_euc_sq'],
-              ['frequency', 'wavg', 'exp_euc_sq']]
     method_names = [m[0] + '-' + m[1] + '-' + m[2] + '_' for m in models]
 
     all_methods = []
@@ -312,13 +308,5 @@ def compare_predictions():
 # do_analysis(path='chi-w2v-yby-s0.5lda-fixed-all', kw_i='dynKW', kw_u=0.2, name='Category-biased(Fixed)')
 # do_analysis(path='chi-w2v-yby-s0.5lda-all', kw_i='dynKW', kw_u=0.2, name='Category-biased')
 # do_analysis(path='chi-w2v-yby-s0.5lda-all', kw_i=[0.9, 2.0, 7.0, 2.0], kw_u='', name='Category-biased')
-#
-# x_names = [r'$full$', r'$PCA-reduced$', r'$FDA-reduced\:(static)$', r'$FDA-reduced\:(dynamic)$']
-# y_names = [r'$1nn$', r'$5nn$', r'$exemplar\:(s=1)$', r'$exemplar$', r'$prototype$']
-# precisions = [[39.1, 39.2, 38.6, 34.5, 26.1],
-#               [39.1, 39.2, 38.7, 35.0, 23.3],
-#               [40.8, 41.2, 42.0, 44.0, 38.6],
-#               [42.9, 43.5, 44.2, 46.7, 40.7]]
-# SuperPredictionAnalyser.barplot3d(precisions, x_names, y_names, baseline=29.9)
 
 # compare_predictions()
