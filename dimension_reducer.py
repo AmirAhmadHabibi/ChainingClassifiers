@@ -1,10 +1,11 @@
 import pickle
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 
-def reduce_LDA(start=1940, threshold=None):
+def reduce_dimensions(start=1940, threshold=None, method='LDA'):
     # read the super words create hitherto for each year then make word vectors for each year's hitherto
     from utilitarian import Progresser
 
@@ -68,33 +69,33 @@ def reduce_LDA(start=1940, threshold=None):
                 X.append(w2v[word])
                 y.append(categories[cat])
 
-        if threshold is not None:
-            if year <= threshold:
-                lda = LinearDiscriminantAnalysis(n_components=classifier_number - 1, solver='eigen', shrinkage=0.5)
-                lda.fit(np.array(X), np.array(y))
-            else:
-                pass
+        if method == 'PCA':
+            transformer = PCA(n_components=classifier_number - 1)
+            transformer.fit(np.array(X))
+        elif threshold is not None and year > threshold:
+            pass
         else:
-            lda = LinearDiscriminantAnalysis(n_components=classifier_number - 1, solver='eigen', shrinkage=0.5)
-            lda.fit(np.array(X), np.array(y))
-
-        # make the new word vector dict for this year
-        word_vectors[year + 1] = dict()
+            transformer = LinearDiscriminantAnalysis(n_components=classifier_number - 1, solver='eigen', shrinkage=0.5)
+            transformer.fit(np.array(X), np.array(y))
 
         # transform ad add both hitherto words of this year and new words of the next year
-        X_new = lda.transform(np.array(X))
-
+        X_new = transformer.transform(np.array(X))
+        # make the new word vector dict for this year
+        word_vectors[year + 1] = dict()
         for i in range(len(words)):
             word_vectors[year + 1][words[i]] = X_new[i]
 
         for word in word_list[year + 1]:
             if word not in word_vectors[year + 1]:
-                word_vectors[year + 1][word] = lda.transform(np.array([w2v[word]]))[0]
+                word_vectors[year + 1][word] = transformer.transform(np.array([w2v[word]]))[0]
 
         prog.count()
 
     # write the word vectors in file
-    if threshold is not None:
+    if method == 'PCA':
+        with open('./data/w2v-chi-yby-PCA.pkl', 'wb') as outfile:
+            pickle.dump(word_vectors, outfile)
+    elif threshold is not None:
         with open('./data/w2v-chi-yby-s0.5LDA-fixed.pkl', 'wb') as outfile:
             pickle.dump(word_vectors, outfile)
     else:

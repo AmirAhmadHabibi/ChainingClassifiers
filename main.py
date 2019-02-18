@@ -13,8 +13,9 @@ sw_builder.build_super_words()
 
 model_saver.w2v_remove_non_superword()
 
-dimension_reducer.reduce_LDA()
-dimension_reducer.reduce_LDA(threshold=1950)
+dimension_reducer.reduce_dimensions(method='PCA')
+dimension_reducer.reduce_dimensions(method='LDA')
+dimension_reducer.reduce_dimensions(method='LDA', threshold=1950)
 
 # 4 different vector spaces
 paths = {'orig': 'chi-w2v-yby-all', 'PCA': 'chi-w2v-yby-pca-all', 's0.5LDA-fixed': 'chi-w2v-yby-s0.5lda-fixed-all',
