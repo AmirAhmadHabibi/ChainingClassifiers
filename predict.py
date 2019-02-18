@@ -1,9 +1,9 @@
 import copy
-from the_predictor_II_I import SuperPredictor
+from the_predictor import SuperPredictor
 import pickle
 
 # load super words
-with open('./super-words-chi/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
+with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
     s_words = pickle.load(super_file)
 
 # save a copy with the frequencies in all years
@@ -29,16 +29,16 @@ def make_predictor(path, w2v_version, s, t, e):
 
     if 'LDA' in w2v_version or 'PCA' in w2v_version:
         if w2v_version == 'LDA':
-            with open('./super-words-chi/w2v-chi-yby-LDA.pkl', 'rb') as infile:
+            with open('./data/w2v-chi-yby-LDA.pkl', 'rb') as infile:
                 w2v_yby = pickle.load(infile)
         elif w2v_version == 's0.5LDA':
-            with open('./super-words-chi/w2v-chi-yby-s0.5LDA.pkl', 'rb') as infile:
+            with open('./data/w2v-chi-yby-s0.5LDA.pkl', 'rb') as infile:
                 w2v_yby = pickle.load(infile)
         elif w2v_version == 's0.5LDA-F':
-            with open('./super-words-chi/w2v-chi-yby-s0.5LDA-fixed.pkl', 'rb') as infile:
+            with open('./data/w2v-chi-yby-s0.5LDA-fixed.pkl', 'rb') as infile:
                 w2v_yby = pickle.load(infile)
         elif w2v_version == 'PCA':
-            with open('./super-words-chi/w2v-chi-yby-PCA.pkl', 'rb') as infile:
+            with open('./data/w2v-chi-yby-PCA.pkl', 'rb') as infile:
                 w2v_yby = pickle.load(infile)
         else:
             raise Exception("Word2vec version not found!")
@@ -46,13 +46,13 @@ def make_predictor(path, w2v_version, s, t, e):
                                    word_vectors=None, word_vector_yby=w2v_yby, swc=sw_complete)
     else:
         if w2v_version == '2D':
-            with open('./super-words-chi/w2v-chi-yby(2D).pkl', 'rb') as w2v_file:
+            with open('./data/w2v-chi-yby(2D).pkl', 'rb') as w2v_file:
                 w2v = pickle.load(w2v_file)
         elif w2v_version == '5D':
-            with open('./super-words-chi/w2v-chi-yby(5D).pkl', 'rb') as w2v_file:
+            with open('./data/w2v-chi-yby(5D).pkl', 'rb') as w2v_file:
                 w2v = pickle.load(w2v_file)
         elif w2v_version == 'orig':
-            with open('./super-words-chi/w2v-chi-yby.pkl', 'rb') as w2v_file:
+            with open('./data/w2v-chi-yby.pkl', 'rb') as w2v_file:
                 w2v = pickle.load(w2v_file)
         else:
             raise Exception("Word2vec version not found!")

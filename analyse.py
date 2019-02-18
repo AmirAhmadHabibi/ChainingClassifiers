@@ -6,7 +6,7 @@ from the_analyser import SuperPredictionAnalyser
 c = ['#E58606', '#99C945', '#52BCA3', '#5D69B1', '#CC61B0', '#DAA51B', '#24796C', '#2F8AC4', '#764E9F', '#ED645A']
 
 # load super words
-with open('./super-words-chi/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
+with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
     s_words = pickle.load(super_file)
 
 # remove context from next years
