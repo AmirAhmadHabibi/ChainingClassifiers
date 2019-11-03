@@ -5,6 +5,8 @@ from random import randint
 import pandas as pd
 import numpy as np
 from scipy import stats
+
+from paths import *
 from utilitarian import QuickDataFrame
 
 from matplotlib.font_manager import FontProperties
@@ -36,13 +38,24 @@ class SuperPredictionAnalyser:
         self.all_methods = all_methods
         self.baselines = baselines
         self.lang = lang
+        context = set()
+        for y in range(START, END):
+            for c, words in super_words[y].items():
+                for appeared_word in words.keys():
+                    context.add(appeared_word)
+        self.context_count = len(context)
 
-    def just_get_precision(self):
+    def just_get_precision(self, first_year, last_year):
         """print the precision of each model"""
-        print('precisions:')
+        # print('precisions:')
+        output = []
         for method in self.all_methods:
-            precision = self.__compute_precision(self.predictions[method], last_year=2003)
-            print(method, ':', precision, 197 * (sqrt((precision * (1 - precision) / 6965))))
+            precision = self.__compute_precision(self.predictions[method], first_year=first_year, last_year=last_year)
+            # compute the binomial confidence interval for 95%
+            interval = 197 * (sqrt((precision * (1 - precision) / self.context_count)))
+            # print(method, ':', round(precision * 100, 1), '\% (' + str(round(interval, 2)) + ')')
+            output.append((method, round(precision * 100, 1), round(interval, 2)))
+        return output
 
     def bar_chart_it(self):
         methods = []
@@ -140,6 +153,38 @@ class SuperPredictionAnalyser:
         fig.savefig('./predictions/' + self.lang + '/stats/plot-kw.png', bbox_inches='tight')
         fig.clear()
         plt.clf()
+
+    @staticmethod
+    def compute_precision(super_words, preds, first_year=1951, last_year=2009):
+        total_number = 0
+        true_positive = 0
+
+        # counting the total number of predicted words
+        for year, cats in preds.items():
+            if year < first_year or last_year < year:
+                continue
+            for cat, words in cats.items():
+                total_number += len(words)
+                break
+        if total_number == 0:
+            return 0.0
+        # counting the number of correct predictions
+        for year, cats in preds.items():
+            if year > last_year or year < first_year:
+                continue
+            best_cat = dict()  # dictionary of word: [best category, probability]
+            for cat, words in cats.items():
+                for word, p in words.items():
+                    if word not in best_cat:
+                        best_cat[word] = [cat, p]
+                    elif p > best_cat[word][1]:
+                        best_cat[word] = [cat, p]
+
+            for word, cat_p in best_cat.items():
+                if word in super_words[year][cat_p[0]]:  # cat_p[1] != 0 and
+                    true_positive += 1
+        # print('total number of preds:', total_number)
+        return true_positive / total_number
 
     def __compute_precision(self, preds, first_year=1951, last_year=2009):
         total_number = 0
@@ -284,7 +329,8 @@ class SuperPredictionAnalyser:
                     prs.append(self.__compute_precision(self.predictions[method], first_year=first_year, last_year=y))
             else:
                 for y in range(first_year, 2000, average):
-                    prs.append(self.__compute_precision(self.predictions[method], first_year=y, last_year=y+average-1))
+                    prs.append(
+                        self.__compute_precision(self.predictions[method], first_year=y, last_year=y + average - 1))
                 # print('-', prs[-1])
             items.append(prs)
 
@@ -306,7 +352,7 @@ class SuperPredictionAnalyser:
         if average is None:
             x = list(range(first_year, 2004))
         else:
-            x = list(range(first_year+average-1, 2004, average))
+            x = list(range(first_year + average - 1, 2004, average))
 
         for i in range(len(items)):
             if 'Baseline' in items_names[i]:
@@ -350,7 +396,7 @@ class SuperPredictionAnalyser:
                     # remove the word from the next years
                     for next_year in range(y + 1, 2010):
                         self.super_words[next_year][c].pop(appeared_word, None)
-        print('done removing!')
+        # print('done removing!')
 
         # find recent words
         new_words = dict()

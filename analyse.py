@@ -1,6 +1,6 @@
 import pickle
 from the_analyser import SuperPredictionAnalyser
-
+from paths import *
 import matplotlib.pyplot as plt
 
 c = ['#E58606', '#99C945', '#52BCA3', '#5D69B1', '#CC61B0', '#DAA51B', '#24796C', '#2F8AC4', '#764E9F', '#ED645A']
@@ -8,7 +8,7 @@ c = ['#E58606', '#99C945', '#52BCA3', '#5D69B1', '#CC61B0', '#DAA51B', '#24796C'
 
 def load_super_words():
     # load super words
-    with open('./data/super_words-chi-Luis-YbyY(w2v).pkl', 'rb') as super_file:
+    with open(super_words_path, 'rb') as super_file:
         s_words = pickle.load(super_file)
 
     # remove context from next years
@@ -18,54 +18,63 @@ def load_super_words():
                 # remove the word from the next years
                 for next_year in range(y + 1, 2010):
                     s_words[next_year][cat].pop(appeared_word, None)
-    print('done removing!')
+    # print('done removing!')
     return s_words
 
 
-def do_analysis(path, models, t=1951):
+def do_analysis(path, models, path_n):
     s_words = load_super_words()
-    with open('./predictions/' + path + '/kernels.pkl', 'rb') as k_file:
-        best_kernel_widths = pickle.load(k_file)
 
     colors = [c[0], c[1], c[2], c[3], c[4]]
 
     all_methods = []
     for m in models:
-        if m[3] == 'adj':
-            m[3] = best_kernel_widths[m[0] + '-' + m[1] + '-' + m[2] + '_'][t - 1]
         all_methods.append(m[0] + '-' + m[1] + '-' + m[2] + '_' + str(m[3]))
     prs = dict()
     for m in all_methods:
-        with open('./predictions/' + path + '/' + m + '.pkl', 'rb') as p_file:
-            prs[m] = pickle.load(p_file)
+        try:
+            with open('./predictions/' + path + '/' + m + '.pkl', 'rb') as p_file:
+                prs[m] = pickle.load(p_file)
+        except:
+            print()
 
-    plotter = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
-                                      all_methods=all_methods, lang=path)
-    plotter.just_get_precision()
+    analyser = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
+                                       all_methods=all_methods, lang=path)
+    s = analyser.just_get_precision(first_year=THRESHOLD, last_year=END)
+    for i in range(int(len(s) / 2)):
+        un = str(s[2 * i][1]) + ' \% (' + str(s[2 * i][2]) + ')'
+        it = str(s[2 * i + 1][1]) + ' \% (' + str(s[2 * i + 1][2]) + ')'
+        print(path_n, models[2 * i][4], '&', un, '&', it, '\\\\', sep='\t')
+        # print(s[2 * i], s[2 * i + 1])
 
 
 def plot_time_series():
     s_words = load_super_words()
 
     fig, ax = plt.subplots(2, 2, figsize=(12, 6))
+    # method_i = [
+    #     {'lang': 'chi-en-w2v-yby-all',
+    #      'name': 'Full'},
+    #     {'lang': 'chi-w2v-yby-pca-all',
+    #      'name': 'PCA-reduced'},
+    #     {'lang': 'chi-w2v-yby-s0.5lda-fixed-all',
+    #      'name': 'FDA-reduced (static)'},
+    #     {'lang': 'chi-w2v-yby-s0.5lda-all',
+    #      'name': 'FDA-reduced (dynamic)'}]
     method_i = [
-        {'lang': 'chi-w2v-yby-all', 'kw_i': 52.0, 'kw_u': 0.8,
+        {'lang': 'chi-en-w2v-yby-all',
          'name': 'Full'},
-        {'lang': 'chi-w2v-yby-pca-all', 'kw_i': 48.0, 'kw_u': 0.5,
+        {'lang': 'chi-en-w2v-yby-pca_resz-all',
          'name': 'PCA-reduced'},
-        {'lang': 'chi-w2v-yby-s0.5lda-fixed-all', 'kw_i': 4.0, 'kw_u': 0.2,
+        {'lang': 'chi-en-w2v-yby-s0.5lda-fixed_resz-all',
          'name': 'FDA-reduced (static)'},
-        {'lang': 'chi-w2v-yby-s0.5lda-all', 'kw_i': 4.0, 'kw_u': 0.2,
+        {'lang': 'chi-en-w2v-yby-s0.5lda_resz-all',
          'name': 'FDA-reduced (dynamic)'}]
-
     for i in range(len(method_i)):
-        names = ['Baseline (s)']
-        all_methods = ['items-one-_1.0']
 
-        names += ['1nn', '5nn', 'Exemplar (s=1)', 'Exemplar', 'Prototype']
-        all_methods += ['items-nn-exp_euc_sq_1.0', 'items-5nn-exp_euc_sq_1.0', 'items-avg-exp_euc_sq_1.0']
-        all_methods += ['items-avg-exp_euc_sq_' + str(method_i[i]['kw_i'])]
-        all_methods += ['items-pt-avg-exp_euc_sq_1.0']
+        names = ['Baseline (s)', '1nn', '5nn', 'Exemplar (s=1)', 'Exemplar', 'Prototype']
+        all_methods = ['items-one-_1.0', 'items-nn-exp_euc_sq_1.0', 'items-5nn-exp_euc_sq_1.0',
+                       'items-avg-exp_euc_sq_1.0', 'items-avg-exp_euc_sq_adj', 'items-pt-avg-exp_euc_sq_1.0']
 
         prs = dict()
         for m in all_methods:
@@ -82,7 +91,7 @@ def plot_time_series():
         plotter.precision_over_time_plot(name=method_i[i]['name'], ax=ax[int(i / 2), i % 2], items_names=names,
                                          average=5)
 
-    ax[1, 0].legend(loc='lower left', ncol=2, fontsize=11)
+    ax[0, 1].legend(loc='upper right', ncol=2, fontsize=11)
     ax[1, 0].set_xlabel('Years', fontsize=12)
     ax[1, 1].set_xlabel('Years', fontsize=12)
     ax[0, 0].set_ylabel('Predictive Accuracy (%)', fontsize=12)
@@ -139,3 +148,7 @@ def compare_predictions():
         prs[1] = pickle.load(p_file)
 
     SuperPredictionAnalyser.overlap(prs[0], prs[1])
+
+
+if __name__ == "__main__":
+    plot_time_series()

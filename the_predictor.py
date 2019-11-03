@@ -1,4 +1,5 @@
 import pickle
+import random
 from time import time
 from gensim import matutils
 from math import exp, log, inf, sqrt
@@ -107,14 +108,15 @@ class SuperPredictor:
         """
 
         t = time()
-        if type(kw) == float:
+        if type(kw) == float or type(kw) == int or type(kw) == str:
+            kw = float(kw)
             self.kernel_width = dict()
             for year in range(self.start, self.end):
                 self.kernel_width[year] = kw
             kw_name = str(kw)
         else:
             self.kernel_width = kw
-            kw_name = 'dynKW'
+            kw_name = 'adj'
         self.prior_dist = prior_dist
         self.cat_sim_method = cat_sim_method
         self.vec_sim_method = vec_sim_method
@@ -181,7 +183,7 @@ class SuperPredictor:
             if len(X) == 0:
                 pass
             elif 'wavg' in self.cat_sim_method:
-                if sum(ws)==0:
+                if sum(ws) == 0:
                     pt_vec = np.mean(X, axis=0)
                 else:
                     pt_vec = np.average(X, axis=0, weights=ws)
@@ -257,13 +259,43 @@ class SuperPredictor:
 
         for item in self.new_words[year]:
             self.prg.count()
-            for category in self.categories:
-                # don't predict for categories that had it before
-                if item in self.super_words_so_far[category]:
-                    p_c_i[category][item] = - inf
-                else:
-                    # the values are in logarithm so the multiplication would be the sum of the two values
-                    p_c_i[category][item] = p_c[category] + self.__get_similarity(item, year - 1, category)
+            # standard knn methods:
+            if self.cat_sim_method.startswith('s') and self.cat_sim_method.endswith('nn'):
+                k = int(self.cat_sim_method[1:-2])
+                max_sim = [(0, '') for _ in range(k)]
+                for cat in self.categories:
+                    for word in self.super_words_so_far[cat]:
+                        try:
+                            sim = self.__vector_similarity(word, item, year=year)
+                            if sim > max_sim[0][0]:
+                                max_sim[0] = (sim, cat)
+                            max_sim = sorted(max_sim, key=lambda t: t[0])
+                        except Exception as e:
+                            print(10, e)
+                nn_count = {cat: 0 for cat in self.categories}
+                max_n = 0
+                for x in max_sim:
+                    nn_count[x[1]] += 1
+                    max_n = max(max_n, nn_count[x[1]])
+                best_cats = [cat for cat in self.categories if nn_count[cat] == max_n]
+                if self.prior_dist == 'uniform':
+                    best_cat = random.choice(best_cats)
+                elif self.prior_dist == 'items':
+                    best_cats = {bc: p_c[bc] for bc in best_cats}
+                    best_cat = sorted(best_cats.items(), key=lambda kv: kv[1])[-1][0]
+
+                for category in self.categories:
+                    p_c_i[category][item] = 0
+                p_c_i[best_cat][item] = 1
+                # TODO: check this
+            else:  # other methods
+                for category in self.categories:
+                    # don't predict for categories that had it before
+                    if item in self.super_words_so_far[category]:
+                        p_c_i[category][item] = - inf
+                    else:
+                        # the values are in logarithm so the multiplication would be the sum of the two values
+                        p_c_i[category][item] = p_c[category] + self.__get_similarity(item, year - 1, category)
 
         self.predictions[year] = p_c_i
 
@@ -361,7 +393,7 @@ class SuperPredictor:
                     sim = self.__vector_similarity(word, item, year=year)
                     max_similarity = max(sim, max_similarity)
                 except Exception as e:
-                    print(e)
+                    print('1', e)
             similarity = max_similarity
 
         elif self.cat_sim_method == 'avg':
@@ -373,7 +405,7 @@ class SuperPredictor:
                     similarity_sum += self.__vector_similarity(word, item, year=year)
                     words_count += 1
                 except Exception as e:
-                    print(e)
+                    print('2', e)
             similarity = similarity_sum / words_count if words_count != 0 else 0
 
         elif self.cat_sim_method == 'wavg':
@@ -384,7 +416,7 @@ class SuperPredictor:
                     similarity_sum += self.__vector_similarity(word, item, year=year) * \
                                       self.super_words_c[year][category][word]
                 except Exception as e:
-                    print(e)
+                    print('3', e)
             similarity = similarity_sum / self.frequency[year][category] if self.frequency[year][
                                                                                 category] != 0 else 0
         elif self.cat_sim_method == 'wavg_sqr':
@@ -395,7 +427,7 @@ class SuperPredictor:
                     similarity_sum += self.__vector_similarity(word, item, year=year) * \
                                       sqrt(self.super_words_c[year][category][word])
                 except Exception as e:
-                    print(e)
+                    print('4', e)
             total_freq = sum([sqrt(a) for a in self.super_words[year][category].values()])
             similarity = similarity_sum / total_freq if total_freq != 0 else 0
 
@@ -407,7 +439,7 @@ class SuperPredictor:
                     similarity_sum += self.__vector_similarity(word, item, year=year) * \
                                       log(self.super_words_c[year][category][word])
                 except Exception as e:
-                    print(e)
+                    print('5', e)
             total_freq = sum([log(a) for a in self.super_words[year][category].values()])
             similarity = similarity_sum / total_freq if total_freq != 0 else 0
 
@@ -420,7 +452,7 @@ class SuperPredictor:
                     similarity_sum += self.__vector_similarity(word, item, year=year)
                     words_count += 1
                 except Exception as e:
-                    print(e)
+                    print('6', e)
             similarity = similarity_sum / words_count if words_count != 0 else 0
 
         elif self.cat_sim_method == 'tnn':
@@ -433,7 +465,7 @@ class SuperPredictor:
                     sim = self.__vector_similarity(word, item, year=year)
                     max_similarity = max(sim, max_similarity)
                 except Exception as e:
-                    print(e)
+                    print('7', e)
             similarity = max_similarity
 
         elif self.cat_sim_method == 'tnn_avg':
@@ -447,7 +479,7 @@ class SuperPredictor:
                     similarity_sum += self.__vector_similarity(word, item, year=year)
                     words_count += 1
                 except Exception as e:
-                    print(e)
+                    print('8', e)
             similarity = similarity_sum / words_count if words_count != 0 else 0
 
         elif 'tnn' in self.cat_sim_method:
@@ -462,7 +494,7 @@ class SuperPredictor:
                     max_sim[0] = max(sim, max_sim[0])
                     max_sim = sorted(max_sim)
                 except Exception as e:
-                    print(e)
+                    print('9', e)
             similarity = np.mean(max_sim)
 
         elif 'nn' in self.cat_sim_method:
@@ -475,7 +507,7 @@ class SuperPredictor:
                     max_sim[0] = max(sim, max_sim[0])
                     max_sim = sorted(max_sim)
                 except Exception as e:
-                    print(e)
+                    print(10, e)
             similarity = np.mean(max_sim)
         elif 'pt' in self.cat_sim_method:
             similarity = self.__vector_similarity(w1=item, v2=self.prototypes[category], year=year)
@@ -523,9 +555,9 @@ class SuperPredictor:
             return 1 / np.sqrt(np.sum((vec1 - vec2) ** 2))
         elif self.vec_sim_method == 'exp_euc':
             return exp(
-                - np.sqrt(np.sum((vec1 - vec2) ** 2)) / self.kernel_width[year])
+                - np.sqrt(np.sum((vec1 - vec2) ** 2)) / self.kernel_width[year+1])
         elif self.vec_sim_method == 'exp_euc_sq':
-            return exp(- np.sum((vec1 - vec2) ** 2) / self.kernel_width[year])
+            return exp(- np.sum((vec1 - vec2) ** 2) / self.kernel_width[year+1])
         elif self.vec_sim_method == 'hbc':
             try:
                 return self.hbc[w1][w2]
