@@ -320,8 +320,8 @@ class SuperPredictionAnalyser:
         first_year = 1951
         items = []
         for method in self.all_methods:
-            if not method.startswith('items'):
-                continue
+            # if not method.startswith('items'):
+            #     continue
             print('computing precision for', method)
             prs = []
             if average is None:
@@ -369,7 +369,7 @@ class SuperPredictionAnalyser:
             ax.set_xticks(list(range(first_year, 2004, 5)))
         else:
             ax.set_xticks(x)
-        ax.set_yticks([i / 100 for i in range(20, 61, 5)])
+        ax.set_yticks([i / 100 for i in range(0, 51, 5)])
         ax.xaxis.set_tick_params(labelsize=10)
         ax.yaxis.set_tick_params(labelsize=10)
         # ax.yaxis.grid(alpha=0.3, linestyle='solid', linewidth=1)
@@ -541,10 +541,10 @@ class SuperPredictionAnalyser:
             fig.clear()
             plt.clf()
 
-    def scatter_plot_category_precision_recall(self, name):
+    def scatter_plot_category_precision_recall(self):
         # find the frequency of each category
-        first_year = 1951
-        last_year = 2009
+        first_year = THRESHOLD
+        last_year = END-1
         cat_size = dict()
         for cat in self.super_words[last_year].keys():
             cat_size[cat] = 0
@@ -553,7 +553,7 @@ class SuperPredictionAnalyser:
                 cat_size[cat] += len(self.super_words[year][cat])
         sorted_cats = sorted(cat_size, key=lambda x: cat_size[x], reverse=True)
 
-        # for each method create the bar plot
+        # for each method
         for method, preds in self.predictions.items():
             # find the highest prediction probability for each word in each year
             best_cat = dict()
@@ -642,10 +642,8 @@ class SuperPredictionAnalyser:
             ax.set_ylabel('Precision', fontsize=14)
             ax.set_xlabel('Recall', fontsize=14)
             # ax.set_title('Precision vs Recall of predictions for the classifiers \n' + name + ' : ' + method_name)
-            fig.savefig('./predictions/' + self.lang + '/stats/scatter_plot-precision-recall-' + method_name + '.png',
-                        bbox_inches='tight')
-
-            fig.savefig('./predictions/' + self.lang + '/stats/scatter_plot-precision-recall-' + method_name + '.pdf',
+            fig.savefig('./predictions/scatter_plot-precision-recall-' + method_name + '.png', bbox_inches='tight')
+            fig.savefig('./predictions/scatter_plot-precision-recall-' + method_name + '.pdf',
                         format='pdf', transparent=True, bbox_inches='tight')
             fig.clear()
             plt.clf()

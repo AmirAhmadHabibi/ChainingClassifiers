@@ -1,3 +1,4 @@
+import copy
 import pickle
 import random
 from time import time
@@ -280,7 +281,7 @@ class SuperPredictor:
                 best_cats = [cat for cat in self.categories if nn_count[cat] == max_n]
                 if self.prior_dist == 'uniform':
                     best_cat = random.choice(best_cats)
-                elif self.prior_dist == 'items':
+                elif self.prior_dist == 'items' or self.prior_dist == 'frequency':
                     best_cats = {bc: p_c[bc] for bc in best_cats}
                     best_cat = sorted(best_cats.items(), key=lambda kv: kv[1])[-1][0]
 
@@ -299,7 +300,80 @@ class SuperPredictor:
 
         self.predictions[year] = p_c_i
 
-    def __calculate_prior(self, year=None):
+    def set_params(self, prior_dist, cat_sim_method, vec_sim_method):
+        self.prior_dist = prior_dist
+        self.cat_sim_method = cat_sim_method
+        self.vec_sim_method = vec_sim_method
+
+    def build_super_words_until(self):
+        self.super_words_until = {self.threshold - 2: {}}
+        for cat in self.categories:
+            self.super_words_until[self.threshold - 2][cat] = set()
+        for yr in range(self.start, self.threshold-1):
+            for cat, wrds in self.super_words[yr].items():
+                self.super_words_until[self.threshold - 2][cat] = self.super_words_until[self.threshold - 2][
+                                                                      cat] | wrds.keys()
+        for yr in range(self.threshold-1, self.end):
+            self.super_words_until[yr] = copy.deepcopy(self.super_words_until[yr - 1])
+            for cat, wrds in self.super_words[yr].items():
+                self.super_words_until[yr][cat] = self.super_words_until[yr][cat] | wrds.keys()
+
+    def log_likelihood_of_posterior(self, year, kw):
+        """
+
+        """
+        kw = float(kw)
+        self.kernel_width = dict()
+        for y in range(self.start, self.end):
+            self.kernel_width[y] = kw
+        # self.prg = Progresser(len(self.new_words[year]),
+        #                       msg='llp for ' + self.prior_dist + '-' + self.cat_sim_method + '-' + self.vec_sim_method
+        #                           + '_' + str(self.kernel_width[year]) + 'y:' + str(year))
+
+        # prepare w2v list for this year if the vectors are Year by Year
+        if self.word_vectors_yby is not None:
+            self.word_vectors = self.word_vectors_yby[year]
+
+        # update super words until now if the method is not based on only the immediate previous year
+        try:
+            self.super_words_so_far = self.super_words_until[year - 1]
+        except:
+            self.build_super_words_until()
+            self.super_words_so_far = self.super_words_until[year - 1]
+
+        p_c = self.__calculate_prior(year=year - 1, log_res=False)
+
+        p_c_i = dict()  # P(category | item) ~ P(category) * P(item | category)
+        posterior_list = []
+
+        for item in self.new_words[year]:
+            p_c_i[item] = dict()
+            true_cats = []
+            sum_over_categories = 0.0
+            for category in self.categories:
+                # don't count categories that had it before
+                # if item in self.super_words_so_far[category]:
+                #     p_c_i[item][category] = 0
+                # else:
+                # the values are in logarithm so the multiplication would be the sum of the two values
+                p_c_i[item][category] = p_c[category] * self.__get_similarity(item, year - 1, category, False)
+                sum_over_categories += p_c_i[item][category]
+                if item in self.super_words[year][category]:
+                    true_cats.append(p_c_i[item][category])
+
+            for x in true_cats:
+                try:
+                    posterior_list.append(log(x) - log(sum_over_categories))
+                except:
+                    posterior_list.append(-1000000000.0)
+
+            # self.prg.count()
+
+        log_of_posteriors = sum(posterior_list)
+
+        return log_of_posteriors
+
+    def __calculate_prior(self, year=None, log_res=True):
         """
         Parameters
         ----------
@@ -345,15 +419,16 @@ class SuperPredictor:
         else:
             raise Exception('Prior calculation method not defined!')
 
-        # convert to log(p_c)
-        for key in p_c.keys():
-            if p_c[key] == 0:
-                p_c[key] = - inf
-            else:
-                p_c[key] = log(p_c[key])
+        if log_res:
+            # convert to log(p_c)
+            for key in p_c.keys():
+                if p_c[key] == 0:
+                    p_c[key] = - inf
+                else:
+                    p_c[key] = log(p_c[key])
         return p_c
 
-    def __get_similarity(self, item, year, category):
+    def __get_similarity(self, item, year, category, log_res=True):
         """
         Parameters
         ----------
@@ -514,9 +589,12 @@ class SuperPredictor:
         else:
             raise Exception('Category similarity method not defined!')
 
-        if similarity == 0:
-            return - inf
-        return log(similarity)
+        if log_res:
+            if similarity == 0:
+                return - inf
+            return log(similarity)
+        else:
+            return similarity
 
     def __vector_similarity(self, w1=None, w2=None, v1=None, v2=None, year=None):
         """
@@ -555,9 +633,9 @@ class SuperPredictor:
             return 1 / np.sqrt(np.sum((vec1 - vec2) ** 2))
         elif self.vec_sim_method == 'exp_euc':
             return exp(
-                - np.sqrt(np.sum((vec1 - vec2) ** 2)) / self.kernel_width[year+1])
+                - np.sqrt(np.sum((vec1 - vec2) ** 2)) / self.kernel_width[year + 1])
         elif self.vec_sim_method == 'exp_euc_sq':
-            return exp(- np.sum((vec1 - vec2) ** 2) / self.kernel_width[year+1])
+            return exp(- np.sum((vec1 - vec2) ** 2) / self.kernel_width[year + 1])
         elif self.vec_sim_method == 'hbc':
             try:
                 return self.hbc[w1][w2]

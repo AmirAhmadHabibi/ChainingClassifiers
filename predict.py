@@ -72,38 +72,52 @@ def predict_and_get_precision(path, name, s_words, pred, m, kw, year):
     return SuperPredictionAnalyser.compute_precision(s_words, prs[name], first_year=year, last_year=year)
 
 
-def predict_and_get_precision_preset(kw):
+def get_llp_preset(kw):
     # print('||', kw)
-    if type(kw) != float:
+    if type(kw) not in {np.float64, float, int}:
         kw = kw[0]
-    global o_path, o_name, o_s_words, o_pred, o_m, o_year
+    global o_path, o_name, o_s_words, o_pred, o_m, o_year, llp
     if kw <= 0:
-        return 0
-    kw = float(round(kw, tol))
-    file_name = './predictions/' + o_path + '/' + o_m[0] + '-' + o_m[1] + '-' + o_m[2] + '_' + str(kw) + '.pkl'
-    if not os.path.exists(file_name):
-        o_pred.predict_them_all(prior_dist=o_m[0], cat_sim_method=o_m[1], vec_sim_method=o_m[2], kw=kw)
-    with open(file_name, 'rb') as p_file:
-        prs = {o_name: pickle.load(p_file)}
-    # return - SuperPredictionAnalyser.compute_precision(o_s_words, prs[o_name], first_year=1940, last_year=o_year) #TODO
-    r = - SuperPredictionAnalyser.compute_precision(o_s_words, prs[o_name], first_year=o_year, last_year=o_year)
-    print('\\\\', kw, r)
-    return r
+        return 10000000000000000
+    # kw = float(round(kw, tol))
+    file_name = './predictions/' + o_path + '/llp- ' + o_m[0] + '-' + o_m[1] + '-' + o_m[2] + '_' + str(kw) + '.pkl'
+    # if not os.path.exists(file_name):
+    #     o_pred.predict_them_all(prior_dist=o_m[0], cat_sim_method=o_m[1], vec_sim_method=o_m[2], kw=kw)
+    #
+    # with open(file_name, 'rb') as p_file:
+    #     prs = {o_name: pickle.load(p_file)}
+    # # return - SuperPredictionAnalyser.compute_precision(o_s_words, prs[o_name], first_year=1940, last_year=o_year) #TODO
+    # r = - SuperPredictionAnalyser.compute_precision(o_s_words, prs[o_name], first_year=o_year, last_year=o_year)
+    # print('\\\\', kw, r)
+
+    # if not os.path.exists(file_name):
+    res = - o_pred.log_likelihood_of_posterior(year=o_year, kw=kw)
+    print('||', kw, res)
+    # else:
+    #     with open(file_name, 'rb') as p_file:
+    #         llp = pickle.load(p_file)
+    #         res = -llp[o_year]
+    #     print('|', kw, res)
+    return res
 
 
 def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=1941, e=2010, std=False):
-    global o_path, o_name, o_s_words, o_pred, o_m, o_year, tol
+    global o_path, o_name, o_s_words, o_pred, o_m, o_year, tol, llp
     # perform a binary search
     s_words, sw_complete = load_super_words()
     kernels = dict()
     method_names = {m[0] + '-' + m[1] + '-' + m[2] + '_': m for m in models}
     if len(method_names) == 0:
         return
+    llp = {}
     for name, m in method_names.items():
         # print('--', name)
         kernels[name] = dict()
         predictor = make_predictor_object(path, w2v_version, s, t, e)
+        predictor.set_params(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2])
+        o_path, o_name, o_s_words, o_pred, o_m, tol = path, name, s_words, predictor, m, 2
         for year in range(THRESHOLD, END):
+            o_year = year - 1
             if not std:
                 decimal_points = 2
                 min_step = pow(0.1, decimal_points)
@@ -118,9 +132,11 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
                         sf = '%.' + str(decimal_points) + 'f'
                         current_kw = float(sf % round(current_kw, decimal_points))
                         # find the precision for the point
-                        prc = predict_and_get_precision(path=path, name=name, s_words=s_words, pred=predictor, m=m,
-                                                        kw=current_kw, year=year - 1)
-                        print(name, current_kw, '|', prc)
+                        # prc = predict_and_get_precision(path=path, name=name, s_words=s_words, pred=predictor, m=m,
+                        #                                 kw=current_kw, year=year - 1)
+
+                        prc = -get_llp_preset(current_kw)
+                        # print(name, current_kw, '|', prc)
                         if prc > best_prc:
                             best_prc = prc
                             best_kw = current_kw
@@ -128,17 +144,17 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
                     kw_min = best_kw - 1.0 * step_size
                     kw_max = best_kw + 1.0 * step_size
                     step_size = round(step_size / 5.0, decimal_points)
+                print('--', year, best_kw)
                 kernels[name][year] = best_kw
             else:
-                o_path, o_name, o_s_words, o_pred, o_m, o_year, tol = path, name, s_words, predictor, m, year - 1, 2
-                # res = minimize_scalar(fun=predict_and_get_precision_preset, bracket=(0, 30), bounds=(0, 100),
+                # res = minimize_scalar(fun=get_llp_preset, bracket=(0, 30), bounds=(0, 100),
                 #                       method='brent', tol=0.1, options={'maxiter': 100, 'disp': True})
-                # res = minimize_scalar(fun=predict_and_get_precision_preset, bounds=(0, 100),
-                #                       method='Bounded', tol=0.001, options={'maxiter': 200, 'disp': 3})
-                res = minimize(fun=predict_and_get_precision_preset, x0=np.array([1.0]), bounds=[(0.0, 100.0)],
-                               tol=0.001, options={'maxiter': 200, 'disp': False})
-                print(res, res.x)
-                kernels[name][year] = res.x[0]
+                res = minimize_scalar(fun=get_llp_preset, bounds=(0, 100), method='Bounded', tol=0.001)
+                # res = minimize(fun=get_llp_preset, method='L-BFGS-B', x0=np.array([1.0]),
+                #                bounds=[(0.01, 100.0)])  # , tol=0.01 , options={'maxiter': 200, 'disp': False}
+                print('--', year, res.x)
+                # kernels[name][year] = res.x[0]
+                kernels[name][year] = res.x
         print('best_kw for', name, ':', kernels[name])
     if std:
         sufx = '-opt'
