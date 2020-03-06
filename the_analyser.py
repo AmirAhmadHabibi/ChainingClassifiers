@@ -8,7 +8,7 @@ from scipy import stats
 
 from paths import *
 from utilitarian import QuickDataFrame
-
+from math import inf
 from matplotlib.font_manager import FontProperties
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
@@ -53,6 +53,19 @@ class SuperPredictionAnalyser:
             precision = self.__compute_precision(self.predictions[method], first_year=first_year, last_year=last_year)
             # compute the binomial confidence interval for 95%
             interval = 197 * (sqrt((precision * (1 - precision) / self.context_count)))
+            # print(method, ':', round(precision * 100, 1), '\% (' + str(round(interval, 2)) + ')')
+            output.append((method, round(precision * 100, 1), round(interval, 2)))
+        return output
+
+    def just_get_llp(self, first_year, last_year):
+        """print the precision of each model"""
+        # print('precisions:')
+        output = []
+        for method in self.all_methods:
+            precision = self.__compute_llp(self.predictions[method], first_year=first_year, last_year=last_year)
+            # compute the binomial confidence interval for 95%
+            # interval = 197 * (sqrt((precision * (1 - precision) / self.context_count)))
+            interval = 0.0
             # print(method, ':', round(precision * 100, 1), '\% (' + str(round(interval, 2)) + ')')
             output.append((method, round(precision * 100, 1), round(interval, 2)))
         return output
@@ -216,6 +229,24 @@ class SuperPredictionAnalyser:
                     true_positive += 1
         # print('total number of preds:', total_number)
         return true_positive / total_number
+
+    def __compute_llp(self, preds, first_year=1951, last_year=2009):
+        """compute the average log likelihood of the posteriors of the correct predictions"""
+        llp = []
+        count_inf = 0
+        count_all = 0
+        for year, cat_words in self.super_words.items():
+            if year < first_year or last_year < year:
+                continue
+            for cat, words in cat_words.items():
+                for word in words:
+                    count_all += 1
+                    if preds[year][cat][word] == -inf:
+                        count_inf += 1
+                    else:
+                        llp.append(preds[year][cat][word])
+        print('infs:', count_inf, '/', count_all)
+        return float(np.mean(llp))
 
     def box_plot_it(self):
         num_of_cats = 0
@@ -544,7 +575,7 @@ class SuperPredictionAnalyser:
     def scatter_plot_category_precision_recall(self):
         # find the frequency of each category
         first_year = THRESHOLD
-        last_year = END-1
+        last_year = END - 1
         cat_size = dict()
         for cat in self.super_words[last_year].keys():
             cat_size[cat] = 0

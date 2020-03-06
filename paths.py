@@ -37,9 +37,9 @@
 
 paths = {
     'orig': 'chi-en-w2v-yby-all',
-    'PCA_resz': 'chi-en-w2v-yby-pca_resz-all',
-    's0.5LDA-fixed_resz': 'chi-en-w2v-yby-s0.5lda-fixed_resz-all',
-    's0.5LDA_resz': 'chi-en-w2v-yby-s0.5lda_resz-all'
+    # 'PCA_resz': 'chi-en-w2v-yby-pca_resz-all',
+    # 's0.5LDA-fixed_resz': 'chi-en-w2v-yby-s0.5lda-fixed_resz-all',
+    # 's0.5LDA_resz': 'chi-en-w2v-yby-s0.5lda_resz-all'
 }
 path_name={
     'orig': 'Full',

@@ -251,7 +251,8 @@ class SuperPredictor:
                 else:
                     self.kde_functions[cat] = None
 
-        p_c = self.__calculate_prior(year=year - 1)
+        # p_c = self.__calculate_prior(year=year - 1,log_res=True)
+        p_c = self.__calculate_prior(year=year - 1, log_res=False)
 
         p_c_i = dict()  # P(category | item) ~ P(category) * P(item | category)
         # initialise the 2D dict
@@ -290,13 +291,39 @@ class SuperPredictor:
                 p_c_i[best_cat][item] = 1
                 # TODO: check this
             else:  # other methods
+                # for category in self.categories:
+                #     # don't predict for categories that had it before
+                #     if item in self.super_words_so_far[category]:
+                #         p_c_i[category][item] = - inf
+                #     else:
+                #         # the values are in logarithm so the multiplication would be the sum of the two values
+                #         p_c_i[category][item] = p_c[category] + self.__get_similarity(item, year - 1, category)
+                # TODO: the next lines or the previous lines
+                sum_over_categories = 0.0
                 for category in self.categories:
+                    if len(self.super_words_so_far[category]) == 0:
+                        p_c_i[category][item] = 0
                     # don't predict for categories that had it before
                     if item in self.super_words_so_far[category]:
-                        p_c_i[category][item] = - inf
+                        p_c_i[category][item] = 0
                     else:
                         # the values are in logarithm so the multiplication would be the sum of the two values
-                        p_c_i[category][item] = p_c[category] + self.__get_similarity(item, year - 1, category)
+                        p_c_i[category][item] = p_c[category] * self.__get_similarity(item, year - 1, category, False)
+                        sum_over_categories += p_c_i[category][item]
+
+                for category in self.categories:
+                    if len(self.super_words_so_far[category]) == 0 or item in self.super_words_so_far[category]:
+                        p_c_i[category][item] = -inf
+                    else:
+                        # p_c_i[category][item] = log(p_c_i[category][item]) - log(sum_over_categories)
+
+                        try:
+                            p_c_i[category][item] = log(p_c_i[category][item]) - log(sum_over_categories)
+                        except:
+                            p_c_i[category][item] = -inf
+                            # a=self.__get_similarity(item, year - 1, category, False)
+                            # a=self.__get_similarity(item, year - 1, category, False)
+                            # p_c_i[item][category] = -1000000000.0
 
         self.predictions[year] = p_c_i
 
@@ -309,18 +336,18 @@ class SuperPredictor:
         self.super_words_until = {self.threshold - 2: {}}
         for cat in self.categories:
             self.super_words_until[self.threshold - 2][cat] = set()
-        for yr in range(self.start, self.threshold-1):
+        for yr in range(self.start, self.threshold - 1):
             for cat, wrds in self.super_words[yr].items():
                 self.super_words_until[self.threshold - 2][cat] = self.super_words_until[self.threshold - 2][
                                                                       cat] | wrds.keys()
-        for yr in range(self.threshold-1, self.end):
+        for yr in range(self.threshold - 1, self.end):
             self.super_words_until[yr] = copy.deepcopy(self.super_words_until[yr - 1])
             for cat, wrds in self.super_words[yr].items():
                 self.super_words_until[yr][cat] = self.super_words_until[yr][cat] | wrds.keys()
 
     def log_likelihood_of_posterior(self, year, kw):
         """
-
+        to find the best kernel width ...
         """
         kw = float(kw)
         self.kernel_width = dict()
@@ -346,11 +373,14 @@ class SuperPredictor:
         p_c_i = dict()  # P(category | item) ~ P(category) * P(item | category)
         posterior_list = []
 
+        # For each new noun
         for item in self.new_words[year]:
             p_c_i[item] = dict()
             true_cats = []
             sum_over_categories = 0.0
             for category in self.categories:
+                if len(self.super_words_so_far[category]) == 0:
+                    continue
                 # don't count categories that had it before
                 # if item in self.super_words_so_far[category]:
                 #     p_c_i[item][category] = 0
@@ -365,11 +395,14 @@ class SuperPredictor:
                 try:
                     posterior_list.append(log(x) - log(sum_over_categories))
                 except:
-                    posterior_list.append(-1000000000.0)
+                    print('EXCEPTION IN LOG POSTERIOR!')
+
 
             # self.prg.count()
 
-        log_of_posteriors = sum(posterior_list)
+        # log_of_posteriors = sum(posterior_list)
+        # print('length of the list:', len(posterior_list))
+        log_of_posteriors = np.mean(posterior_list)
 
         return log_of_posteriors
 
@@ -592,9 +625,9 @@ class SuperPredictor:
         if log_res:
             if similarity == 0:
                 return - inf
-            return log(similarity)
+            return log(similarity) - log(self.kernel_width[year + 1])  # TODO: I changed this
         else:
-            return similarity
+            return similarity / self.kernel_width[year + 1]  # TODO: I changed this
 
     def __vector_similarity(self, w1=None, w2=None, v1=None, v2=None, year=None):
         """

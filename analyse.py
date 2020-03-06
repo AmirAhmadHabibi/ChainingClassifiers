@@ -22,7 +22,7 @@ def load_super_words():
     return s_words
 
 
-def do_analysis(path, models, path_n):
+def do_analysis(path, models, path_n, llp=False):
     s_words = load_super_words()
 
     colors = [c[0], c[1], c[2], c[3], c[4]]
@@ -40,12 +40,19 @@ def do_analysis(path, models, path_n):
 
     analyser = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
                                        all_methods=all_methods, lang=path)
-    s = analyser.just_get_precision(first_year=THRESHOLD, last_year=END)
-    for i in range(int(len(s) / 2)):
-        un = str(s[2 * i][1]) + ' \% (' + str(s[2 * i][2]) + ')'
-        it = str(s[2 * i + 1][1]) + ' \% (' + str(s[2 * i + 1][2]) + ')'
-        print(path_n, models[2 * i][4], '&', un, '&', it, '\\\\', sep='\t')
-        # print(s[2 * i], s[2 * i + 1])
+    if llp:
+        s = analyser.just_get_llp(first_year=THRESHOLD, last_year=END)
+        for i in range(int(len(s) / 2)):
+            un = str(s[2 * i][1])
+            it = str(s[2 * i + 1][1])
+            print(path_n, models[2 * i][4], '&', un, '&', it, '\\\\', sep='\t')
+    else:
+        s = analyser.just_get_precision(first_year=THRESHOLD, last_year=END)
+        for i in range(int(len(s) / 2)):
+            un = str(s[2 * i][1]) + ' \% (' + str(s[2 * i][2]) + ')'
+            it = str(s[2 * i + 1][1]) + ' \% (' + str(s[2 * i + 1][2]) + ')'
+            print(path_n, models[2 * i][4], '&', un, '&', it, '\\\\', sep='\t')
+            # print(s[2 * i], s[2 * i + 1])
 
 
 def plot_time_series():
@@ -106,7 +113,7 @@ def plot_time_series():
     # ax[1, 0].set_ylabel('Predictive Accuracy (%)', fontsize=12)
     print('saving...')
     plt.tight_layout()
-    name = 'precisions_over_time'
+    # name = 'precisions_over_time'
     name = 'precisions_over_time-5ave'
     fig.savefig('./predictions/' + name + '.png', bbox_inches='tight')
     fig.savefig('./predictions/' + name + '.pdf', format='pdf', transparent=True, bbox_inches='tight')
@@ -158,7 +165,43 @@ def compare_predictions():
     SuperPredictionAnalyser.overlap(prs[0], prs[1])
 
 
-def make_bar_chart(path, models):
+def make_bar_chart(path, llp=False, tokens=False):
+    if tokens:
+        name = 'model' + ('-llp' if llp else '-precision')+'-token'
+        models=[]
+        k_list = list(range(1, 11))
+        # k_list = [15, 20, 25, 30, 50]
+        for i in k_list:
+            models.append(['uniform', 's' + str(i) + 'nn', 'exp_euc_sq', '1.0', str(i) + 'nn'])
+            models.append(['frequency', 's' + str(i) + 'nn', 'exp_euc_sq', '1.0', str(i) + 'nn'])
+        models += [
+            ['uniform', 'wavg', 'exp_euc_sq', '1.0', 'exemplar (s=1)'],
+            ['frequency', 'wavg', 'exp_euc_sq', '1.0', 'exemplar (s=1)'],
+            ['uniform', 'wavg', 'exp_euc_sq', 'adj', 'exemplar'],
+            ['frequency', 'wavg', 'exp_euc_sq', 'adj', 'exemplar'],
+            ['uniform', 'pt-wavg', 'exp_euc_sq', '1.0', 'prototype'],
+            ['frequency', 'pt-wavg', 'exp_euc_sq', '1.0', 'prototype'],
+            ['uniform', 'one', '', '1.0','Baseline'],
+            ['frequency', 'one', '', '1.0','Baseline']
+        ]
+    else:
+        name = 'model' + ('-llp' if llp else '-precision')
+        models=[]
+        k_list = list(range(1, 11))
+        # k_list = [15, 20, 25, 30, 50]
+        for i in k_list:
+            models.append(['uniform', 's' + str(i) + 'nn', 'exp_euc_sq', '1.0', str(i) + 'nn'])
+            models.append(['items', 's' + str(i) + 'nn', 'exp_euc_sq', '1.0', str(i) + 'nn'])
+        models += [
+            ['uniform', 'avg', 'exp_euc_sq', '1.0', 'exemplar (s=1)'],
+            ['items', 'avg', 'exp_euc_sq', '1.0', 'exemplar (s=1)'],
+            ['uniform', 'avg', 'exp_euc_sq', 'adj', 'exemplar'],
+            ['items', 'avg', 'exp_euc_sq', 'adj', 'exemplar'],
+            ['uniform', 'pt-avg', 'exp_euc_sq', '1.0', 'prototype'],
+            ['items', 'pt-avg', 'exp_euc_sq', '1.0', 'prototype'],
+            ['uniform', 'one', '', '1.0', 'Baseline'],
+            ['items', 'one', '', '1.0', 'Baseline'],
+        ]
     s_words = load_super_words()
 
     colors = [c[0], c[1], c[2], c[3], c[4]]
@@ -179,42 +222,64 @@ def make_bar_chart(path, models):
 
     analyser = SuperPredictionAnalyser(super_words=s_words, predictions=prs, colors=colors, baselines=None,
                                        all_methods=all_methods, lang=path)
-    s = analyser.just_get_precision(first_year=THRESHOLD, last_year=END)
-    unif = []
-    unif_er = []
-    size = []
-    size_er = []
-    for i in range(int(len(s) / 2)):
-        unif.append(s[2 * i][1] / 100)
-        unif_er.append(s[2 * i][2] / 100)
-        size.append(s[2 * i + 1][1] / 100)
-        size_er.append(s[2 * i + 1][2] / 100)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+
+    if llp:
+        s = analyser.just_get_llp(first_year=THRESHOLD, last_year=END)
+        unif = []
+        unif_er = []
+        size = []
+        size_er = []
+        for i in range(int(len(s) / 2)):
+            unif.append(s[2 * i][1] / 100)
+            unif_er.append(s[2 * i][2] / 100)
+            size.append(s[2 * i + 1][1] / 100)
+            size_er.append(s[2 * i + 1][2] / 100)
+        ax[0].set_ylabel('Log likelihood of the posteriors', fontsize=12)
+        bot=min(unif+size)
+        bot*=1.1
+        ax[0].set_ylim(bottom=bot, top=0)
+        ax[1].set_ylim(bottom=bot, top=0)
+    else:
+        s = analyser.just_get_precision(first_year=THRESHOLD, last_year=END)
+        unif = []
+        unif_er = []
+        size = []
+        size_er = []
+        for i in range(int(len(s) / 2)):
+            unif.append(s[2 * i][1] / 100)
+            unif_er.append(s[2 * i][2] / 100)
+            size.append(s[2 * i + 1][1] / 100)
+            size_er.append(s[2 * i + 1][2] / 100)
+        # top = max(unif + size)
+        # top *= 1.1
+        top=0.42
+        ax[0].set_ylim(bottom=0, top=top)
+        ax[1].set_ylim(bottom=0, top=top)
+        # ax[0].set_yticks([i / 100 for i in range(0, 46, 5)])
+        # ax[1].set_yticks([i / 100 for i in range(0, 46, 5)])
+        ax[0].set_ylabel('Predictive Accuracy (%)', fontsize=12)
+
     ax[0].bar(method_names, unif, yerr=unif_er, error_kw=dict(ecolor='black', lw=1, capsize=4, capthick=1, alpha=0.5))
     ax[0].set_xticklabels(method_names, rotation=30, ha="right")
     ax[0].set_title('uniform')
     ax[0].spines['right'].set_visible(False)
     ax[0].spines['top'].set_visible(False)
-    ax[0].set_yticks([i / 100 for i in range(0, 46, 5)])
 
     ax[1].bar(method_names, size, yerr=size_er, error_kw=dict(ecolor='black', lw=1, capsize=4, capthick=1, alpha=0.5))
     ax[1].set_xticklabels(method_names, rotation=30, ha="right")
     ax[1].set_title('size-based')
     ax[1].spines['right'].set_visible(False)
     ax[1].spines['top'].set_visible(False)
-    ax[1].set_yticks([i / 100 for i in range(0, 46, 5)])
 
-    ax[0].set_xlabel('methods', fontsize=12)
-    ax[1].set_xlabel('methods', fontsize=12)
-    ax[0].set_ylabel('Predictive Accuracy (%)', fontsize=12)
-    # ax[1, 0].set_ylabel('Predictive Accuracy (%)', fontsize=12)
+    ax[0].set_xlabel('models', fontsize=12)
+    ax[1].set_xlabel('models', fontsize=12)
     print('saving...')
     plt.tight_layout()
-    name = 'precisions_all_methods'
-    # name = 'precisions_all_methods-token'
+
     fig.savefig('./predictions/' + name + '.png', bbox_inches='tight')
-    fig.savefig('./predictions/' + name + '.pdf', format='pdf', transparent=True, bbox_inches='tight')
+    # fig.savefig('./predictions/' + name + '.pdf', format='pdf', transparent=True, bbox_inches='tight')
     fig.savefig('./predictions/' + name + '.eps', format='eps', transparent=True, bbox_inches='tight')
     fig.clear()
     plt.clf()
@@ -281,7 +346,80 @@ def make_precision_recall_plot(path, models):
     analyser.scatter_plot_category_precision_recall()
 
 
+def plot_s_values_over_time():
+    all_methods = [('uniform-avg-exp_euc_sq_', 'uniform prior'), ('items-avg-exp_euc_sq_','size-based prior')]
+    file_name = 's-over-time'
+    # all_methods = [('uniform-wavg-exp_euc_sq_', 'uniform prior'), ('frequency-wavg-exp_euc_sq_', 'size-based prior')]
+    # file_name = 's-over-time-token'
+
+    # method_i = [
+    #     {'lang': 'chi-en-w2v-yby-all',
+    #      'name': 'Full'},
+    #     {'lang': 'chi-w2v-yby-pca-all',
+    #      'name': 'PCA-reduced'},
+    #     {'lang': 'chi-w2v-yby-s0.5lda-fixed-all',
+    #      'name': 'FDA-reduced (static)'},
+    #     {'lang': 'chi-w2v-yby-s0.5lda-all',
+    #      'name': 'FDA-reduced (dynamic)'}]
+    method_i = [
+        {'lang': 'chi-en-w2v-yby-all',
+         'name': 'Full'},
+        # {'lang': 'chi-en-w2v-yby-pca_resz-all',
+        #  'name': 'PCA-reduced'},
+        # {'lang': 'chi-en-w2v-yby-s0.5lda-fixed_resz-all',
+        #  'name': 'FDA-reduced (static)'},
+        # {'lang': 'chi-en-w2v-yby-s0.5lda_resz-all',
+        #  'name': 'FDA-reduced (dynamic)'}
+    ]
+
+    kws = dict()
+    for m in method_i:
+        with open('./predictions/' + m['lang'] + '/kernels-prc-10.pkl', 'rb') as k_file:
+        # with open('./predictions/' + m['lang'] + '/kernels-opt.pkl', 'rb') as k_file:
+            kws[m['name']] = pickle.load(k_file)
+
+    first_year = 1950
+    print('plotting...')
+    fig, ax = plt.subplots(1, figsize=(12, 6))
+    x_list = list(range(first_year, 2004))
+
+    i = 0
+    for name, kw in kws.items():
+        kw_list_uni = [1 / kw[all_methods[0][0]][year] for year in x_list]
+        kw_list_itm = [1 / kw[all_methods[1][0]][year] for year in x_list]
+        ax.plot(x_list, kw_list_uni, linewidth=1.5, color=c[i], label=all_methods[0][1], alpha=1, dashes=[5, 2])
+        ax.plot(x_list, kw_list_itm, linewidth=1.5, color=c[i], label=all_methods[1][1], alpha=1)
+        i += 1
+
+    # ax.set_xticks(x_list)
+    # ax.set_yticks([i for i in range(0, 20)])
+    # ax.set_ylim(bottom=0, top=10)
+    ax.set_ylim(bottom=0, top=11)
+    ax.set_xlim(right=1995)
+    ax.xaxis.set_tick_params(labelsize=10)
+    ax.yaxis.set_tick_params(labelsize=10)
+    # ax.yaxis.grid(alpha=0.3, linestyle='solid', linewidth=1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # ax.set_title('Precision over time for ' + name + ' models', fontsize=16)
+    # ax.set_title('stimated optimal values of the sensitivity parameter (s) from the type-based models.', fontsize=13)
+
+    ax.legend(loc='upper left', ncol=2, fontsize=11)
+    ax.set_xlabel('Years', fontsize=12)
+    ax.set_ylabel('Estimated s', fontsize=12)
+    # ax[1, 0].set_ylabel('Predictive Accuracy (%)', fontsize=12)
+    print('saving...')
+    plt.tight_layout()
+    fig.savefig('./predictions/' + file_name + '.png', bbox_inches='tight')
+    fig.savefig('./predictions/' + file_name + '.pdf', format='pdf', transparent=True, bbox_inches='tight')
+    # fig.savefig('./predictions/' + file_name + '.eps', format='eps', transparent=True, bbox_inches='tight')
+    fig.clear()
+    plt.clf()
+
+
 if __name__ == "__main__":
-    # plot_time_series()
+    plot_time_series()
     # find_predicted_cat_for_nouns()
+    # plot_s_values_over_time()
     pass
