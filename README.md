@@ -8,10 +8,10 @@ This repository includes code and data for analyses in the following work:
 
 ## Python Files
 
-* `main.py` runs the whole process, using the other files. You can follow the flow of the code from this file, if you need to.
-* `paths.py` indicates the paths to the data and directories used throughout the program.
-* `model_saver.py` creates the necessary format for the word embedding input file.
-* `super_words_builder.py` creates the file that contains the mapping of the classifiers and their nouns for each year with the right format for the input of the program.
+* [`main.py`](main.py) runs the whole process, using the other files. You can follow the flow of the code from this file, if you need to.
+* [`paths.py`](paths.py) indicates the paths to the data and directories used throughout the code.
+* [`model_saver.py`](model_saver.py) creates the necessary format for the word embedding input file.
+* [`super_words_builder.py`](super_words_builder.py) creates the file that contains the mapping of the classifiers and their nouns for each year with the right format for the input of the program.
 * `dimension_reducer.py` reduces the dimension of the word embeddings using FDA and PCA.
 * `the_predictor.py` has the SuperPredictor class that does the prediction for a set of classifier nouns for a number of steps and saves a prediction file.
 * `predict.py` includes the function for running the prediction processes and kernel-width optimization using the SuperPredictor class.
@@ -23,9 +23,8 @@ This repository includes code and data for analyses in the following work:
 
 ## Data Files 
 
-* `English_translation_survey_results.zip`
-*
-* The data on classifier-noun pairs in [data/gwc2016_classifiers/](data/gwc2016_classifiers/) is provided by:
-```
-Morgado da Costa, L., Bond, F., & Gao, H. (2016). Mapping and generating classifiers using an open chineseontology. InProceedings of the 8th Global WordNet Conference.
-```
+* [`data/super_words-chi-Luis-YbyY(w2v-en).pkl`](data/super_words-chi-Luis-YbyY(w2v-en).pkl) is the file containing the classifier-noun data over time with the specific format that is used in the code.
+* [`data/w2v-chi-en-yby.pkl`](data/w2v-chi-en-yby.pkl) is the word embedding file that maps Chinese nouns to the embedding of their English translations.
+* [`English_translation_survey_results.zip`](English_translation_survey_results.zip) includes three xlsx files for surveying 100 sampled Chinese nouns in English translations.
+* [`data/gwc2016_classifiers/`](data/gwc2016_classifiers/) includes the data on classifier-noun pairs provided by:
+`Morgado da Costa, L., Bond, F., & Gao, H. (2016). Mapping and generating classifiers using an open chineseontology. InProceedings of the 8th Global WordNet Conference.`
