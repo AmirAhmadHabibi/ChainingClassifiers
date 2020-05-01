@@ -43,9 +43,10 @@ paths = {
 }
 path_name={
     'orig': 'Full',
-    'PCA_resz': 'PCA-reduced',
-    's0.5LDA-fixed_resz': 'FDA-reduced',
-    's0.5LDA_resz': 'FDA-reduced'}
+    # 'PCA_resz': 'PCA-reduced',
+    # 's0.5LDA-fixed_resz': 'FDA-reduced',
+    # 's0.5LDA_resz': 'FDA-reduced'
+}
 super_words_path = './data/super_words-chi-Luis-YbyY(w2v-en).pkl'
 w2v_path = './data/w2v-chi-en-yby.pkl'
 w2v_init = './data/w2v-chi-en-yby-'

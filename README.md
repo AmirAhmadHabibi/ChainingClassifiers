@@ -8,20 +8,17 @@ This repository includes code and data for analyses in the following work:
 
 ## Python Files
 
-* `main.py` runs the whole process, using all other files. You can follow the flow of the code from this file, if you need to.
-* `paths.py` indicates the paths to the data and directories that are used throught the program.
-* `analyse.py` 
-* chaining_plotter.py
-* dimension_reducer.py
-* English_translation_survey_results.zip
-* model_saver.py
-* predictions
-* predict.py
-* simulation_analysis.py
-* super_words_builder.py
-* the_analyser.py
-* the_predictor.py
-* utilitarian.py
+* `main.py` runs the whole process, using the other files. You can follow the flow of the code from this file, if you need to.
+* `paths.py` indicates the paths to the data and directories used throughout the program.
+* `model_saver.py` creates the necessary format for the word embedding input file.
+* `super_words_builder.py` creates the file that contains the mapping of the classifiers and their nouns for each year with the right format for the input of the program.
+* `dimension_reducer.py` reduces the dimension of the word embeddings using FDA and PCA.
+* `the_predictor.py` has the SuperPredictor class that does the prediction for a set of classifier nouns for a number of steps and saves a prediction file.
+* `predict.py` includes the function for running the prediction processes and kernel-width optimization using the SuperPredictor class.
+* `the_analyser.py` contains the SuperPredictionAnalyser class that has the necessary methods to analyse the accuracy of a prediction file.
+* `analyse.py` includes functions that use the SuperPredictionAnalyser class to do the evaluation and create plots.
+* `simulation_analysis.py` creates a simulation of the important chaining mechanisms on a randomly generated data and plots the results.
+* `utilitarian.py` contains some utility functions and classes.
 
 
 ## Data Files 
