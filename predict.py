@@ -19,40 +19,44 @@ def load_super_words():
     sw_complete = copy.deepcopy(s_words)
 
     # remove context from next years so to have only the first year of appearance of each context word
-    for y in range(1940, 2010):
+    for y in range(START, END, STEP):
         for c, words in s_words[y].items():
             for appeared_word in words.keys():
                 # remove the word from the next years
-                for next_year in range(y + 1, 2010):
+                for next_year in range(y + STEP, END, STEP):
                     s_words[next_year][c].pop(appeared_word, None)
     # print('done removing!')
 
-    # remove categories that are empty after 1940
-    for empty_cat in ['枝', '桌', '课', '进', '丝', '记', '盏', '夥', '轴', '尾', '针']:
-        for y in range(1940, 2010):
-            s_words[y].pop(empty_cat, None)
+    # # remove categories that are empty after 1940
+    # for empty_cat in ['枝', '桌', '课', '进', '丝', '记', '盏', '夥', '轴', '尾', '针']:
+    #     for y in range(1940, 2010):
+    #         s_words[y].pop(empty_cat, None)
     return s_words, sw_complete
 
 
-def make_predictor_object(path, w2v_version, s, t, e):
+def make_predictor_object(path, w2v_version, s, t, e, step):
     """find the word vector to load and then make a predictor object with it"""
     s_words, sw_complete = load_super_words()
-
-    if 'LDA' in w2v_version or 'PCA' in w2v_version:
+    if 'en-w2v-all' in path:
+        with open(w2v_path, 'rb') as infile:
+            w2v_yby = pickle.load(infile)
+        predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, step=step, path=path,
+                                   word_vectors=None, word_vector_yby=w2v_yby, swc=sw_complete)
+    elif 'LDA' in w2v_version or 'PCA' in w2v_version:
         with open(w2v_init + w2v_version + '.pkl', 'rb') as infile:
             w2v_yby = pickle.load(infile)
-        predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, path=path,
+        predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, step=step, path=path,
                                    word_vectors=None, word_vector_yby=w2v_yby, swc=sw_complete)
     else:
         with open(w2v_path, 'rb') as w2v_file:
             w2v = pickle.load(w2v_file)
-        predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, path=path,
+        predictor = SuperPredictor(super_words=s_words, hbc=None, start=s, threshold=t, end=e, step=step, path=path,
                                    word_vectors=w2v, word_vector_yby=None, swc=sw_complete)
     return predictor
 
 
-def predict_with_all_kernel_widths(path, w2v_version, kws, models, s=1940, t=1941, e=2010):
-    predictor = make_predictor_object(path, w2v_version, s, t, e)
+def predict_with_all_kernel_widths(path, w2v_version, kws, models, s=1940, t=1941, e=2010, step=1):
+    predictor = make_predictor_object(path, w2v_version, s, t, e, step)
 
     for kw in kws:
         # do each kernel width for all different prior distribution and category similarity method
@@ -60,7 +64,7 @@ def predict_with_all_kernel_widths(path, w2v_version, kws, models, s=1940, t=194
             predictor.predict_them_all(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2], kw=kw)
 
 
-def predict_and_get_precision(path, name, s_words, pred, m, kw, year,start_year=0):
+def predict_and_get_precision(path, name, s_words, pred, m, kw, year, start_year=0):
     if kw <= 0:
         return 0
     file_name = './predictions/' + path + '/' + m[0] + '-' + m[1] + '-' + m[2] + '_' + str(kw) + '.pkl'
@@ -69,7 +73,7 @@ def predict_and_get_precision(path, name, s_words, pred, m, kw, year,start_year=
     with open(file_name, 'rb') as p_file:
         prs = {name: pickle.load(p_file)}
     # return SuperPredictionAnalyser.compute_precision(s_words, prs[name], first_year=1940, last_year=year) #TODO
-    return SuperPredictionAnalyser.compute_precision(s_words, prs[name], first_year=year-start_year, last_year=year)
+    return SuperPredictionAnalyser.compute_precision(s_words, prs[name], first_year=year - start_year, last_year=year)
 
 
 def get_llp_preset(kw):
@@ -101,7 +105,7 @@ def get_llp_preset(kw):
     return res
 
 
-def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=1941, e=2010, mode='mine'):
+def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=1941, e=2010, step=1, mode='mine'):
     global o_path, o_name, o_s_words, o_pred, o_m, o_year, tol, llp, o_kw
     # perform a binary search
     s_words, sw_complete = load_super_words()
@@ -117,11 +121,11 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
     for name, m in method_names.items():
         # print('--', name)
         kernels[name] = dict()
-        predictor = make_predictor_object(path, w2v_version, s, t, e)
+        predictor = make_predictor_object(path, w2v_version, s, t, e, step)
         predictor.set_params(prior_dist=m[0], cat_sim_method=m[1], vec_sim_method=m[2])
         o_path, o_name, o_s_words, o_pred, o_m, tol = path, name, s_words, predictor, m, 2
-        for year in range(THRESHOLD, END):
-            o_year = year - 1
+        for year in range(THRESHOLD, END, STEP):
+            o_year = year - STEP
             o_kw = kernels[name]
             if mode == 'mine':
                 decimal_points = 2
@@ -156,7 +160,7 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
                 step_size = 0.1
                 best_kw = 1.0
                 best_prc = predict_and_get_precision(path=path, name=name, s_words=s_words, pred=predictor, m=m,
-                                                    kw=best_kw, year=year - 1)
+                                                     kw=best_kw, year=year - STEP)
                 current_kw = kwmin + step_size
                 while current_kw <= kwmax:
                     if current_kw == 1.0:
@@ -165,7 +169,7 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
                     current_kw = float(sf % round(current_kw, decimal_points))
                     # find the precision for the point
                     prc = predict_and_get_precision(path=path, name=name, s_words=s_words, pred=predictor, m=m,
-                                                    kw=current_kw, year=year - 1)
+                                                    kw=current_kw, year=year - STEP)
                     # prc = -get_llp_preset(current_kw)
                     # print(name, current_kw, '|', prc)
                     if prc > best_prc:
@@ -179,7 +183,7 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
                 step_size = 0.1
                 best_kw = 1.0
                 best_prc = predict_and_get_precision(path=path, name=name, s_words=s_words, pred=predictor, m=m,
-                                                    kw=best_kw, year=year - 1,start_year=year-10)
+                                                     kw=best_kw, year=year - STEP, start_year=year - 10 * STEP)
                 current_kw = kwmin + step_size
                 while current_kw <= kwmax:
                     if current_kw == 1.0:
@@ -188,7 +192,7 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
                     current_kw = float(sf % round(current_kw, decimal_points))
                     # find the precision for the point
                     prc = predict_and_get_precision(path=path, name=name, s_words=s_words, pred=predictor, m=m,
-                                                    kw=current_kw, year=year - 1)
+                                                    kw=current_kw, year=year - STEP)
                     # prc = -get_llp_preset(current_kw)
                     # print(name, current_kw, '|', prc)
                     if prc > best_prc:
@@ -243,7 +247,7 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
         with open('./predictions/' + path + '/kernels' + sufx + '.pkl', 'rb') as k_file:
             best_kernel_widths = pickle.load(k_file)
     else:
-        best_kernel_widths={}
+        best_kernel_widths = {}
 
     for name, kws in kernels.items():
         best_kernel_widths[name] = kws
@@ -251,8 +255,8 @@ def optimize_kernel_widths(path, w2v_version, models, kwmax, kwmin, s=1940, t=19
         pickle.dump(best_kernel_widths, k_file)
 
 
-def predict_all_models(path, w2v_version, models, s=1940, t=1950, e=2010, mode='std'):
-    predictor = make_predictor_object(path, w2v_version, s, t, e)
+def predict_all_models(path, w2v_version, models, s=1940, t=1950, e=2010, step=1, mode='std'):
+    predictor = make_predictor_object(path, w2v_version, s, t, e, step)
 
     if mode == 'std':
         sufx = '-opt'

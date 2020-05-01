@@ -59,3 +59,30 @@ resize = True
 START = 1940
 THRESHOLD = 1950
 END = 2010
+
+# paths = {
+#     'orig': 'en-w2v-all',
+#     # 'PCA_resz': 'chi-en-w2v-yby-pca_resz-all',
+#     # 's0.5LDA-fixed_resz': 'chi-en-w2v-yby-s0.5lda-fixed_resz-all',
+#     # 's0.5LDA_resz': 'chi-en-w2v-yby-s0.5lda_resz-all'
+# }
+# path_name={
+#     'orig': 'Full',
+#     'PCA_resz': 'PCA-reduced',
+#     's0.5LDA-fixed_resz': 'FDA-reduced',
+#     's0.5LDA_resz': 'FDA-reduced'
+# }
+# super_words_path = './data/super_words-en-karan.pkl'
+# w2v_path = './data/w2v-en-karan.pkl'
+# w2v_init = './data/w2v-en-karan-'
+# #
+# # # pca_reduced_path = './data/w2v-chi-en-yby-PCA_resz.pkl'
+# # # lda_f_reduced_path = './data/w2v-chi-en-yby-s0.5LDA-fixed_resz.pkl'
+# # # lda_reduced_path = './data/w2v-chi-en-yby-s0.5LDA_resz.pkl'
+# # resize = True
+#
+#
+# START = 1840
+# THRESHOLD = 1850
+# END = 2000
+# STEP = 10

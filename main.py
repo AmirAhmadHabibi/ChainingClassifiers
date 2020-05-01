@@ -68,28 +68,29 @@ for v, p in paths.items():
     print(v, p)
     # for all kernel_widths try to predict and then analyse to find the best KW
     # predict_with_all_kernel_widths(path=p, w2v_version=v, kws=kernel_widths, models=kw_models, s=START, t=START + 1,
-    #                                e=END)
+    #                                e=END, step=STEP)
     # find_best_kernel_widths(path=p, kws=kernel_widths, models=kw_models)
     mode = 'prc'
     # mode = 'prc-10'
     # mode = 'std'
     # # mode = 'sanity'
     optimize_kernel_widths(path=p, w2v_version=v, models=kw_models, kwmin=0.0, kwmax=100.0, s=START, t=THRESHOLD, e=END,
-                           mode=mode)
+                           step=STEP, mode=mode)
 
     # having the best kernel widths, predict with all models
-    predict_all_models(path=p, w2v_version=v, models=models, s=START, t=THRESHOLD, e=END, mode=mode)
-    print('results for', v, p)
-    do_analysis(path=p, models=models, path_n=path_name[v], llp=True)
-
-print('==' * 20)
-print('==' * 20)
-# for each type of vector space
-for v, p in paths.items():
-    print(v)
-    # analyse the predictions and get the precision values
-    do_analysis(path=p, models=models, path_n=path_name[v], llp=False)
+    predict_all_models(path=p, w2v_version=v, models=models, s=START, t=THRESHOLD, e=END,step=STEP, mode=mode)
+    # print('results for', v, p)
     # do_analysis(path=p, models=models, path_n=path_name[v], llp=True)
+
+#
+# print('==' * 20)
+# print('==' * 20)
+# # for each type of vector space
+# for v, p in paths.items():
+#     print(v)
+#     # analyse the predictions and get the precision values
+#     do_analysis(path=p, models=models, path_n=path_name[v], llp=False)
+#     # do_analysis(path=p, models=models, path_n=path_name[v], llp=True)
 
 # make_bar_chart('chi-en-w2v-yby-all', llp=False, tokens=False)
 # make_bar_chart('chi-en-w2v-yby-all', llp=False, tokens=True)

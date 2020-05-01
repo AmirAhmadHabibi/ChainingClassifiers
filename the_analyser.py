@@ -356,7 +356,7 @@ class SuperPredictionAnalyser:
             print('computing precision for', method)
             prs = []
             if average is None:
-                for y in range(first_year, 2004):
+                for y in range(first_year, 2004,STEP):
                     prs.append(self.__compute_precision(self.predictions[method], first_year=first_year, last_year=y))
             else:
                 for y in range(first_year, 2000, average):
@@ -381,9 +381,9 @@ class SuperPredictionAnalyser:
             fig, ax = plt.subplots(figsize=(12, 8))
 
         if average is None:
-            x = list(range(first_year, 2004))
+            x = list(range(first_year, 2004,STEP))
         else:
-            x = list(range(first_year + average - 1, 2004, average))
+            x = list(range(first_year + average - STEP, 2004, average))
 
         for i in range(len(items)):
             if 'Baseline' in items_names[i]:
