@@ -59,6 +59,7 @@ resize = True
 START = 1940
 THRESHOLD = 1950
 END = 2010
+STEP = 1
 
 # paths = {
 #     'orig': 'en-w2v-all',
