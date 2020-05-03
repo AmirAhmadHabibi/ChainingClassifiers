@@ -1,6 +1,5 @@
 import super_words_builder as sw_builder
 import model_saver
-import dimension_reducer
 from paths import *
 from analyse import find_best_kernel_widths, do_analysis, make_bar_chart, make_precision_recall_plot
 from predict import predict_with_all_kernel_widths, predict_all_models, optimize_kernel_widths
@@ -12,12 +11,7 @@ model_saver.save_chi_w2vs()
 sw_builder.save_classifier_nouns()
 sw_builder.save_time_stamps()
 sw_builder.build_super_words()
-
 model_saver.w2v_remove_non_superword()
-
-dimension_reducer.reduce_dimensions(method='PCA', resize=resize)
-dimension_reducer.reduce_dimensions(method='LDA', resize=resize)
-dimension_reducer.reduce_dimensions(method='LDA', threshold=THRESHOLD, resize=True)
 
 # models that need kernel width adjustment:
 # each model is described by 4 elements:

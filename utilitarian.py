@@ -398,6 +398,9 @@ class QuickDataFrame:
 
 
 class Progresser:
+    """
+    prints the progress of a loop
+    """
     def __init__(self, total_num, msg=''):
         self.total = total_num
         self.num = 0
