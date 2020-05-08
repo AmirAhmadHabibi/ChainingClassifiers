@@ -2,7 +2,7 @@
 
 This repository includes code and data for analyses in the following work: 
 
-`Habibi, A. A., Kemp, C., and Xu, Y. (under review) Chaining and the growth of linguistic categories.`
+`Habibi, A.A., Kemp, C., and Xu, Y. (to appear) Chaining and the growth of linguistic categories. Cognition.`
 
 
 
